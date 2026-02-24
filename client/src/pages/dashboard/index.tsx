@@ -13,13 +13,13 @@ export default function DashboardIndex() {
     <div className="p-6 md:p-10 max-w-7xl mx-auto w-full">
       <div className="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-4">
         <div>
-          <h1 className="text-3xl font-bold font-display text-foreground">Dashboard</h1>
-          <p className="text-muted-foreground mt-1">Select a company to manage ISO compliance</p>
+          <h1 className="text-3xl font-bold font-display text-foreground">Painel</h1>
+          <p className="text-muted-foreground mt-1">Selecione uma empresa para gerenciar a conformidade ISO</p>
         </div>
         <Link href="/onboarding">
           <Button className="hover-elevate">
             <Plus className="w-4 h-4 mr-2" />
-            Add Company
+            Adicionar Empresa
           </Button>
         </Link>
       </div>
@@ -54,11 +54,11 @@ export default function DashboardIndex() {
                   </CardHeader>
                   <CardContent>
                     <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-secondary text-secondary-foreground">
-                      Size: {company.size}
+                      Tamanho: {company.size}
                     </div>
                   </CardContent>
                   <CardFooter className="pt-4 border-t border-border/50 flex justify-between items-center text-sm text-muted-foreground">
-                    <span>Manage Compliance</span>
+                    <span>Gerenciar Conformidade</span>
                     <ArrowRight className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" />
                   </CardFooter>
                 </Card>
@@ -71,12 +71,12 @@ export default function DashboardIndex() {
           <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center mb-6">
             <Building2 className="w-10 h-10 text-muted-foreground" />
           </div>
-          <h3 className="text-xl font-semibold mb-2">No companies yet</h3>
+          <h3 className="text-xl font-semibold mb-2">Nenhuma empresa ainda</h3>
           <p className="text-muted-foreground mb-6 max-w-sm">
-            Get started by adding your first company to begin the ISO certification process.
+            Comece adicionando sua primeira empresa para iniciar o processo de certificação ISO.
           </p>
           <Link href="/onboarding">
-            <Button size="lg" className="hover-elevate">Create Company</Button>
+            <Button size="lg" className="hover-elevate">Criar Empresa</Button>
           </Link>
         </div>
       )}

@@ -19,28 +19,28 @@ export default function Home() {
         >
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary font-medium text-sm mb-8 border border-primary/20">
             <Zap className="w-4 h-4" />
-            <span>AI-Powered ISO Certification</span>
+            <span>Certificação ISO com Inteligência Artificial</span>
           </div>
           
           <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-foreground mb-6 font-display leading-[1.1]">
-            Get certified faster with <br className="hidden md:block" />
-            <span className="text-gradient">Intelligent Automation</span>
+            Certifique-se mais rápido com <br className="hidden md:block" />
+            <span className="text-gradient">Automação Inteligente</span>
           </h1>
           
           <p className="text-lg md:text-xl text-muted-foreground mb-10 max-w-2xl mx-auto leading-relaxed">
-            Stop drowning in paperwork. Our AI analyzes your sector, recommends the exact ISO standards you need, and generates all required compliance documentation in seconds.
+            Pare de se afogar em papelada. Nossa IA analisa seu setor, recomenda as normas ISO exatas que você precisa e gera toda a documentação de conformidade necessária em segundos.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link href="/onboarding" className="w-full sm:w-auto">
               <Button size="lg" className="w-full h-14 px-8 text-base font-semibold rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-xl shadow-primary/25 hover:-translate-y-0.5 transition-all">
-                Start Onboarding
+                Começar Onboarding
                 <ArrowRight className="ml-2 w-5 h-5" />
               </Button>
             </Link>
             <Link href="/dashboard" className="w-full sm:w-auto">
               <Button size="lg" variant="outline" className="w-full h-14 px-8 text-base font-semibold rounded-xl border-border bg-background hover:bg-muted hover:-translate-y-0.5 transition-all">
-                Go to Dashboard
+                Ir para o Painel
               </Button>
             </Link>
           </div>
@@ -54,18 +54,18 @@ export default function Home() {
         >
           <FeatureCard 
             icon={<ShieldCheck className="w-8 h-8 text-emerald-500" />}
-            title="Smart Recommendations"
-            description="Our AI instantly recommends the right ISO standards (9001, 27001, etc.) based on your specific industry and company size."
+            title="Recomendações Inteligentes"
+            description="Nossa IA recomenda instantaneamente as normas ISO corretas (9001, 27001, etc.) com base na sua indústria específica e tamanho da empresa."
           />
           <FeatureCard 
             icon={<FileText className="w-8 h-8 text-blue-500" />}
-            title="Instant Documentation"
-            description="Generate comprehensive, audit-ready policies and procedures tailored to your operations with a single click."
+            title="Documentação Instantânea"
+            description="Gere políticas e procedimentos abrangentes e prontos para auditoria, adaptados às suas operações com um único clique."
           />
           <FeatureCard 
             icon={<CheckCircle2 className="w-8 h-8 text-purple-500" />}
-            title="Multi-Company Support"
-            description="Manage compliance for multiple entities or clients from a single, beautiful dashboard designed for scale."
+            title="Suporte Multi-Empresa"
+            description="Gerencie a conformidade de várias entidades ou clientes em um único painel moderno projetado para escala."
           />
         </motion.div>
       </main>

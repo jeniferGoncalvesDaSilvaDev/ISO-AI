@@ -38,14 +38,14 @@ export function AppSidebar() {
       
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel className="text-sidebar-foreground/60 uppercase text-xs tracking-wider">Platform</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-sidebar-foreground/60 uppercase text-xs tracking-wider">Plataforma</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild isActive={location === "/"}>
                   <Link href="/" onClick={handleNavClick}>
                     <Home className="w-4 h-4" />
-                    <span>Home</span>
+                    <span>Início</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -53,7 +53,7 @@ export function AppSidebar() {
                 <SidebarMenuButton asChild isActive={location === "/dashboard"}>
                   <Link href="/dashboard" onClick={handleNavClick}>
                     <LayoutDashboard className="w-4 h-4" />
-                    <span>Dashboard</span>
+                    <span>Painel</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -61,7 +61,7 @@ export function AppSidebar() {
                 <SidebarMenuButton asChild isActive={location === "/onboarding"}>
                   <Link href="/onboarding" onClick={handleNavClick}>
                     <PlusCircle className="w-4 h-4" />
-                    <span>New Company</span>
+                    <span>Nova Empresa</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -71,7 +71,7 @@ export function AppSidebar() {
 
         {companies && companies.length > 0 && (
           <SidebarGroup className="mt-4">
-            <SidebarGroupLabel className="text-sidebar-foreground/60 uppercase text-xs tracking-wider">Your Companies</SidebarGroupLabel>
+            <SidebarGroupLabel className="text-sidebar-foreground/60 uppercase text-xs tracking-wider">Suas Empresas</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {companies.map((company) => (

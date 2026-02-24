@@ -20,12 +20,12 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 
 const COMMON_ISOS = [
-  { code: "ISO 9001", name: "Quality Management" },
-  { code: "ISO 27001", name: "Information Security" },
-  { code: "ISO 14001", name: "Environmental Management" },
-  { code: "ISO 45001", name: "Occupational Health & Safety" },
-  { code: "ISO 22000", name: "Food Safety Management" },
-  { code: "ISO 13485", name: "Medical Devices" },
+  { code: "ISO 9001", name: "Gestão da Qualidade" },
+  { code: "ISO 27001", name: "Segurança da Informação" },
+  { code: "ISO 14001", name: "Gestão Ambiental" },
+  { code: "ISO 45001", name: "Saúde e Segurança Ocupacional" },
+  { code: "ISO 22000", name: "Segurança de Alimentos" },
+  { code: "ISO 13485", name: "Dispositivos Médicos" },
 ];
 
 export default function CompanyDashboard() {
@@ -39,7 +39,7 @@ export default function CompanyDashboard() {
   }
   
   if (!company) {
-    return <div className="p-10 text-center"><h2 className="text-2xl font-bold">Company not found</h2></div>;
+    return <div className="p-10 text-center"><h2 className="text-2xl font-bold">Empresa não encontrada</h2></div>;
   }
 
   return (
@@ -52,8 +52,8 @@ export default function CompanyDashboard() {
           <h1 className="text-3xl font-bold font-display text-foreground">{company.name}</h1>
         </div>
         <div className="flex gap-3 mt-4">
-          <Badge variant="secondary" className="px-3 py-1">Sector: {company.sector}</Badge>
-          <Badge variant="outline" className="px-3 py-1 bg-background">Size: {company.size}</Badge>
+          <Badge variant="secondary" className="px-3 py-1">Setor: {company.sector}</Badge>
+          <Badge variant="outline" className="px-3 py-1 bg-background">Tamanho: {company.size}</Badge>
         </div>
       </div>
 
@@ -61,15 +61,15 @@ export default function CompanyDashboard() {
         <TabsList className="grid w-full grid-cols-3 h-14 bg-muted/50 p-1 mb-8">
           <TabsTrigger value="iso" className="data-[state=active]:bg-background data-[state=active]:shadow-sm text-base">
             <CheckSquare className="w-4 h-4 mr-2" />
-            Select ISOs
+            Selecionar ISOs
           </TabsTrigger>
           <TabsTrigger value="generate" className="data-[state=active]:bg-background data-[state=active]:shadow-sm text-base">
             <Sparkles className="w-4 h-4 mr-2" />
-            AI Generation
+            Geração por IA
           </TabsTrigger>
           <TabsTrigger value="documents" className="data-[state=active]:bg-background data-[state=active]:shadow-sm text-base">
             <FileText className="w-4 h-4 mr-2" />
-            Documents
+            Documentos
           </TabsTrigger>
         </TabsList>
 
@@ -112,12 +112,12 @@ function IsoSelectionTab({ company }: { company: any }) {
         const newSet = new Set([...selectedIsos, ...data.recommended]);
         setSelectedIsos(Array.from(newSet));
         toast({
-          title: "AI Recommendations ready",
-          description: `Suggested standards based on '${company.sector}' have been selected.`,
+          title: "Recomendações da IA prontas",
+          description: `Normas sugeridas com base em '${company.sector}' foram selecionadas.`,
         });
       },
       onError: () => {
-        toast({ variant: "destructive", title: "Failed to get recommendations" });
+        toast({ variant: "destructive", title: "Falha ao obter recomendações" });
       }
     });
   };
@@ -126,12 +126,12 @@ function IsoSelectionTab({ company }: { company: any }) {
     selectMutation.mutate({ companyId: company.id, isos: selectedIsos }, {
       onSuccess: () => {
         toast({
-          title: "Selections Saved",
-          description: "Your ISO target standards have been updated.",
+          title: "Seleções Salvas",
+          description: "Suas normas ISO alvo foram atualizadas.",
         });
       },
       onError: () => {
-        toast({ variant: "destructive", title: "Failed to save selections" });
+        toast({ variant: "destructive", title: "Falha ao salvar seleções" });
       }
     });
   };
@@ -149,8 +149,8 @@ function IsoSelectionTab({ company }: { company: any }) {
       <div className="lg:col-span-2 space-y-6">
         <Card className="border-border/60 shadow-md">
           <CardHeader>
-            <CardTitle>Target Standards</CardTitle>
-            <CardDescription>Select the ISO standards you want to achieve certification for.</CardDescription>
+            <CardTitle>Normas Alvo</CardTitle>
+            <CardDescription>Selecione as normas ISO que você deseja obter a certificação.</CardDescription>
           </CardHeader>
           <CardContent className="grid sm:grid-cols-2 gap-4">
             {COMMON_ISOS.map((iso) => (
@@ -180,7 +180,7 @@ function IsoSelectionTab({ company }: { company: any }) {
               disabled={selectMutation.isPending}
               className="hover-elevate px-8"
             >
-              {selectMutation.isPending ? "Saving..." : "Save Selections"}
+              {selectMutation.isPending ? "Salvando..." : "Salvar Seleções"}
             </Button>
           </CardFooter>
         </Card>
@@ -192,12 +192,12 @@ function IsoSelectionTab({ company }: { company: any }) {
             <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center mb-2 text-primary">
               <Sparkles className="w-5 h-5" />
             </div>
-            <CardTitle>AI Assistant</CardTitle>
-            <CardDescription>Not sure which standards apply to your business?</CardDescription>
+            <CardTitle>Assistente de IA</CardTitle>
+            <CardDescription>Não tem certeza de quais normas se aplicam ao seu negócio?</CardDescription>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground mb-6">
-              Our AI can analyze your sector ({company.sector}) and recommend the most critical ISO standards for compliance and operational excellence.
+              Nossa IA pode analisar seu setor ({company.sector}) e recomendar as normas ISO mais críticas para conformidade e excelência operacional.
             </p>
             <Button 
               onClick={handleRecommend} 
@@ -206,9 +206,9 @@ function IsoSelectionTab({ company }: { company: any }) {
               className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
             >
               {recommendMutation.isPending ? (
-                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Analyzing...</>
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Analisando...</>
               ) : (
-                <><Sparkles className="w-4 h-4 mr-2" /> Recommend ISOs</>
+                <><Sparkles className="w-4 h-4 mr-2" /> Recomendar ISOs</>
               )}
             </Button>
           </CardContent>
@@ -228,8 +228,8 @@ function GenerateDocumentsTab({ companyId }: { companyId: number }) {
     if (!savedIsos || savedIsos.length === 0) {
       toast({
         variant: "destructive",
-        title: "No ISOs selected",
-        description: "Please select target standards in the first tab before generating documents.",
+        title: "Nenhuma ISO selecionada",
+        description: "Por favor, selecione as normas alvo na primeira aba antes de gerar os documentos.",
       });
       return;
     }
@@ -237,12 +237,12 @@ function GenerateDocumentsTab({ companyId }: { companyId: number }) {
     generateMutation.mutate(companyId, {
       onSuccess: () => {
         toast({
-          title: "Documents Generated!",
-          description: "AI has successfully created your compliance documentation.",
+          title: "Documentos Gerados!",
+          description: "A IA criou com sucesso sua documentação de conformidade.",
         });
       },
       onError: (err) => {
-        toast({ variant: "destructive", title: "Generation failed", description: err.message });
+        toast({ variant: "destructive", title: "Falha na geração", description: err.message });
       }
     });
   };
@@ -256,9 +256,9 @@ function GenerateDocumentsTab({ companyId }: { companyId: number }) {
           <div className="mb-6 inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
             <FileSignature className="w-8 h-8" />
           </div>
-          <h2 className="text-3xl font-bold font-display mb-4">Auto-Generate Documentation</h2>
+          <h2 className="text-3xl font-bold font-display mb-4">Gerar Documentação Automaticamente</h2>
           <p className="text-muted-foreground text-lg mb-8 leading-relaxed">
-            Our Gemini AI engine will process your company profile and selected ISO standards to generate customized policies, manuals, and procedures required for certification.
+            Nosso motor de IA Gemini processará o perfil da sua empresa e as normas ISO selecionadas para gerar políticas, manuais e procedimentos personalizados necessários para a certificação.
           </p>
 
           <Button 
@@ -268,17 +268,17 @@ function GenerateDocumentsTab({ companyId }: { companyId: number }) {
             className={`w-full sm:w-auto h-14 text-lg ${isGenerating ? 'bg-muted text-muted-foreground' : 'bg-primary hover:bg-primary/90 hover-elevate'}`}
           >
             {isGenerating ? (
-              <><Loader2 className="w-5 h-5 mr-3 animate-spin" /> Generating Policies...</>
+              <><Loader2 className="w-5 h-5 mr-3 animate-spin" /> Gerando Políticas...</>
             ) : (
-              <><Sparkles className="w-5 h-5 mr-3" /> Generate with AI</>
+              <><Sparkles className="w-5 h-5 mr-3" /> Gerar com IA</>
             )}
           </Button>
 
           {(!savedIsos || savedIsos.length === 0) && (
             <Alert variant="destructive" className="mt-6">
               <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Action Required</AlertTitle>
-              <AlertDescription>You must select at least one ISO standard first.</AlertDescription>
+              <AlertTitle>Ação Necessária</AlertTitle>
+              <AlertDescription>Você deve selecionar pelo menos uma norma ISO primeiro.</AlertDescription>
             </Alert>
           )}
         </div>
@@ -298,8 +298,8 @@ function GenerateDocumentsTab({ companyId }: { companyId: number }) {
                   <div className="absolute inset-0 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
                   <Sparkles className="absolute inset-0 m-auto w-10 h-10 text-primary animate-pulse" />
                 </div>
-                <h3 className="text-xl font-bold mb-2">AI is working...</h3>
-                <p className="text-sm text-muted-foreground">Drafting comprehensive compliance policies tailored to your exact sector constraints.</p>
+                <h3 className="text-xl font-bold mb-2">A IA está trabalhando...</h3>
+                <p className="text-sm text-muted-foreground">Redigindo políticas de conformidade abrangentes e adaptadas às restrições exatas do seu setor.</p>
                 
                 <div className="mt-8 space-y-3 text-left">
                   <Skeleton className="h-4 w-full" />
@@ -317,7 +317,7 @@ function GenerateDocumentsTab({ companyId }: { companyId: number }) {
                 <div className="w-24 h-24 mx-auto bg-card rounded-2xl shadow-sm border border-border/50 flex items-center justify-center mb-6 transform -rotate-6">
                   <FileText className="w-10 h-10 text-muted-foreground/50" />
                 </div>
-                <p className="text-muted-foreground font-medium">Ready to compile documents</p>
+                <p className="text-muted-foreground font-medium">Pronto para compilar documentos</p>
               </motion.div>
             )}
           </AnimatePresence>
@@ -343,8 +343,8 @@ function ViewDocumentsTab({ companyId }: { companyId: number }) {
     return (
       <div className="py-20 text-center border border-dashed border-border rounded-xl bg-muted/10">
         <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-50" />
-        <h3 className="text-xl font-semibold mb-2">No documents found</h3>
-        <p className="text-muted-foreground">Go to the AI Generation tab to create your compliance docs.</p>
+        <h3 className="text-xl font-semibold mb-2">Nenhum documento encontrado</h3>
+        <p className="text-muted-foreground">Vá para a aba de Geração por IA para criar seus documentos de conformidade.</p>
       </div>
     );
   }
@@ -369,7 +369,7 @@ function ViewDocumentsTab({ companyId }: { companyId: number }) {
                   <Download className="w-4 h-4" />
                 </Button>
               </div>
-              <CardTitle className="text-xl">Policy Document</CardTitle>
+              <CardTitle className="text-xl">Documento de Política</CardTitle>
             </CardHeader>
             <CardContent className="flex-1">
               <div className="text-sm text-muted-foreground bg-muted/40 p-4 rounded-lg border border-border/50 h-32 overflow-hidden relative">
@@ -378,8 +378,8 @@ function ViewDocumentsTab({ companyId }: { companyId: number }) {
               </div>
             </CardContent>
             <CardFooter className="pt-0 pb-4 px-6 flex justify-between items-center text-sm text-muted-foreground">
-              <span className="flex items-center"><CheckCircle2 className="w-4 h-4 mr-1 text-emerald-500" /> Audit Ready</span>
-              <Button variant="link" className="px-0">View Full Document</Button>
+              <span className="flex items-center"><CheckCircle2 className="w-4 h-4 mr-1 text-emerald-500" /> Pronto para Auditoria</span>
+              <Button variant="link" className="px-0">Ver Documento Completo</Button>
             </CardFooter>
           </Card>
         </motion.div>

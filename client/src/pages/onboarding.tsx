@@ -51,15 +51,15 @@ export default function Onboarding() {
     createCompany.mutate(data, {
       onSuccess: (company) => {
         toast({
-          title: "Company created!",
-          description: `${company.name} has been successfully registered.`,
+          title: "Empresa criada!",
+          description: `${company.name} foi registrada com sucesso.`,
         });
         setLocation(`/dashboard/company/${company.id}`);
       },
       onError: (error) => {
         toast({
           variant: "destructive",
-          title: "Error creating company",
+          title: "Erro ao criar empresa",
           description: error.message,
         });
       }
@@ -76,14 +76,14 @@ export default function Onboarding() {
         className="max-w-md w-full mx-auto relative z-10"
       >
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-foreground font-display">Setup Your Company</h1>
-          <p className="text-muted-foreground mt-2">Let's get some basic information to tailor your ISO journey.</p>
+          <h1 className="text-3xl font-bold text-foreground font-display">Configure sua Empresa</h1>
+          <p className="text-muted-foreground mt-2">Vamos coletar algumas informações básicas para personalizar sua jornada ISO.</p>
         </div>
 
         <Card className="glass-card border-border shadow-xl">
           <CardHeader>
-            <CardTitle>Company Details</CardTitle>
-            <CardDescription>Enter the primary details for the entity seeking certification.</CardDescription>
+            <CardTitle>Detalhes da Empresa</CardTitle>
+            <CardDescription>Insira os detalhes principais da entidade que busca a certificação.</CardDescription>
           </CardHeader>
           <CardContent>
             <Form {...form}>
@@ -95,11 +95,11 @@ export default function Onboarding() {
                     <FormItem>
                       <FormLabel className="flex items-center gap-2">
                         <Building className="w-4 h-4 text-primary" />
-                        Company Name
+                        Nome da Empresa
                       </FormLabel>
                       <FormControl>
                         <Input 
-                          placeholder="Acme Corp, LLC" 
+                          placeholder="Ex: Acme Corp Ltda" 
                           {...field} 
                           className="h-12 bg-background/50 focus:bg-background transition-colors"
                         />
@@ -116,16 +116,16 @@ export default function Onboarding() {
                     <FormItem>
                       <FormLabel className="flex items-center gap-2">
                         <Factory className="w-4 h-4 text-primary" />
-                        Industry Sector
+                        Setor da Indústria
                       </FormLabel>
                       <FormControl>
                         <Input 
-                          placeholder="e.g. Software, Manufacturing, Healthcare" 
+                          placeholder="Ex: Software, Manufatura, Saúde" 
                           {...field} 
                           className="h-12 bg-background/50 focus:bg-background transition-colors"
                         />
                       </FormControl>
-                      <FormDescription>This helps our AI recommend the right standards.</FormDescription>
+                      <FormDescription>Isso ajuda nossa IA a recomendar as normas corretas.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -138,20 +138,20 @@ export default function Onboarding() {
                     <FormItem>
                       <FormLabel className="flex items-center gap-2">
                         <Users className="w-4 h-4 text-primary" />
-                        Company Size
+                        Tamanho da Empresa
                       </FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger className="h-12 bg-background/50 focus:bg-background transition-colors">
-                            <SelectValue placeholder="Select company size" />
+                            <SelectValue placeholder="Selecione o tamanho" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="1-10">Micro (1-10 employees)</SelectItem>
-                          <SelectItem value="11-50">Small (11-50 employees)</SelectItem>
-                          <SelectItem value="51-200">Medium (51-200 employees)</SelectItem>
-                          <SelectItem value="201-1000">Large (201-1000 employees)</SelectItem>
-                          <SelectItem value="1000+">Enterprise (1000+ employees)</SelectItem>
+                          <SelectItem value="1-10">Micro (1-10 funcionários)</SelectItem>
+                          <SelectItem value="11-50">Pequena (11-50 funcionários)</SelectItem>
+                          <SelectItem value="51-200">Média (51-200 funcionários)</SelectItem>
+                          <SelectItem value="201-1000">Grande (201-1000 funcionários)</SelectItem>
+                          <SelectItem value="1000+">Corporação (1000+ funcionários)</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -164,7 +164,7 @@ export default function Onboarding() {
                   className="w-full h-12 text-base font-semibold mt-4 shadow-md hover-elevate"
                   disabled={createCompany.isPending}
                 >
-                  {createCompany.isPending ? "Creating..." : "Create & Continue"}
+                  {createCompany.isPending ? "Criando..." : "Criar e Continuar"}
                 </Button>
               </form>
             </Form>
