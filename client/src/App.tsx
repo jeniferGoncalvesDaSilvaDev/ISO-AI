@@ -30,7 +30,9 @@ function Router() {
               <main className="flex-1 overflow-auto bg-muted/10">
                 <Switch>
                   <Route path="/dashboard" component={DashboardIndex} />
-                  <Route path="/dashboard/company/:id" component={CompanyDashboard} />
+                  <Route path="/dashboard/company/:id">
+                    {(params) => <CompanyDashboard />}
+                  </Route>
                   <Route component={NotFound} />
                 </Switch>
               </main>
