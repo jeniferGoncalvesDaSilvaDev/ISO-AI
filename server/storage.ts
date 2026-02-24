@@ -1,38 +1,48 @@
-import { type User, type InsertUser } from "@shared/schema";
-import { randomUUID } from "crypto";
-
-// modify the interface with any CRUD methods
-// you might need
+import { db } from "./db";
+import { companies, isoSelections, documents, type Company, type InsertCompany, type IsoSelection, type InsertIsoSelection, type Document, type InsertDocument } from "@shared/schema";
+import { eq } from "drizzle-orm";
 
 export interface IStorage {
-  getUser(id: string): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
+  createCompany(company: InsertCompany): Promise<Company>;
+  getCompanies(): Promise<Company[]>;
+  getCompany(id: number): Promise<Company | undefined>;
+  saveIsoSelections(companyId: number, isos: string[]): Promise<IsoSelection[]>;
+  getIsoSelections(companyId: number): Promise<IsoSelection[]>;
+  saveDocument(doc: InsertDocument): Promise<Document>;
+  getDocuments(companyId: number): Promise<Document[]>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<string, User>;
-
-  constructor() {
-    this.users = new Map();
+export class DatabaseStorage implements IStorage {
+  async createCompany(insertCompany: InsertCompany): Promise<Company> {
+    const [company] = await db.insert(companies).values(insertCompany).returning();
+    return company;
   }
-
-  async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
+  async getCompanies(): Promise<Company[]> {
+    return await db.select().from(companies);
   }
-
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+  async getCompany(id: number): Promise<Company | undefined> {
+    const [company] = await db.select().from(companies).where(eq(companies.id, id));
+    return company;
   }
-
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const id = randomUUID();
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
-    return user;
+  async saveIsoSelections(companyId: number, isos: string[]): Promise<IsoSelection[]> {
+    // Replace all existing selections for the company
+    await db.delete(isoSelections).where(eq(isoSelections.companyId, companyId));
+    if (isos.length === 0) return [];
+    
+    const values = isos.map(isoCode => ({ companyId, isoCode }));
+    const inserted = await db.insert(isoSelections).values(values).returning();
+    return inserted;
+  }
+  async getIsoSelections(companyId: number): Promise<IsoSelection[]> {
+    return await db.select().from(isoSelections).where(eq(isoSelections.companyId, companyId));
+  }
+  async saveDocument(insertDocument: InsertDocument): Promise<Document> {
+    const [doc] = await db.insert(documents).values(insertDocument).returning();
+    return doc;
+  }
+  async getDocuments(companyId: number): Promise<Document[]> {
+    return await db.select().from(documents).where(eq(documents.companyId, companyId));
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
