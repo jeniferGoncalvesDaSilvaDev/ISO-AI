@@ -20,10 +20,6 @@ function Router() {
       
       {/* Dashboard Routes wrapped in Sidebar layout */}
       <Route path="/dashboard">
-        <Redirect to="/dashboard/list" />
-      </Route>
-
-      <Route path="/dashboard/:rest*">
         <SidebarProvider>
           <div className="flex min-h-screen w-full bg-background overflow-hidden">
             <AppSidebar />
@@ -32,11 +28,23 @@ function Router() {
                 <SidebarTrigger className="hover:bg-muted" />
               </header>
               <main className="flex-1 overflow-auto bg-muted/10">
-                <Switch>
-                  <Route path="/dashboard/list" component={DashboardIndex} />
-                  <Route path="/dashboard/company/:id" component={CompanyDashboard} />
-                  <Route component={NotFound} />
-                </Switch>
+                <DashboardIndex />
+              </main>
+            </div>
+          </div>
+        </SidebarProvider>
+      </Route>
+
+      <Route path="/dashboard/company/:id">
+        <SidebarProvider>
+          <div className="flex min-h-screen w-full bg-background overflow-hidden">
+            <AppSidebar />
+            <div className="flex flex-col flex-1 w-full relative">
+              <header className="h-16 flex items-center px-4 border-b border-border/40 bg-background/95 backdrop-blur z-10">
+                <SidebarTrigger className="hover:bg-muted" />
+              </header>
+              <main className="flex-1 overflow-auto bg-muted/10">
+                <CompanyDashboard />
               </main>
             </div>
           </div>

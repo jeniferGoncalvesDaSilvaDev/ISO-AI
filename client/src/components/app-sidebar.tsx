@@ -50,8 +50,8 @@ export function AppSidebar() {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={location === "/dashboard/list"}>
-                  <Link href="/dashboard/list" onClick={handleNavClick}>
+                <SidebarMenuButton asChild isActive={location === "/dashboard"}>
+                  <Link href="/dashboard" onClick={handleNavClick}>
                     <LayoutDashboard className="w-4 h-4" />
                     <span>Painel</span>
                   </Link>
