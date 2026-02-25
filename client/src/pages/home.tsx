@@ -38,7 +38,7 @@ export default function Home() {
                 <ArrowRight className="ml-2 w-5 h-5" />
               </Button>
             </Link>
-            <Link href="/dashboard" className="w-full sm:w-auto">
+            <Link href="/dashboard/list" className="w-full sm:w-auto">
               <Button size="lg" variant="outline" className="w-full h-14 px-8 text-base font-semibold rounded-xl border-border bg-background hover:bg-muted hover:-translate-y-0.5 transition-all">
                 Ir para o Painel
               </Button>
