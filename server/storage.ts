@@ -10,6 +10,8 @@ export interface IStorage {
   getIsoSelections(companyId: number): Promise<IsoSelection[]>;
   saveDocument(doc: InsertDocument): Promise<Document>;
   getDocuments(companyId: number): Promise<Document[]>;
+  saveChatMessage(message: InsertChatMessage): Promise<ChatMessage>;
+  getChatMessages(companyId: number): Promise<ChatMessage[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -42,6 +44,13 @@ export class DatabaseStorage implements IStorage {
   }
   async getDocuments(companyId: number): Promise<Document[]> {
     return await db.select().from(documents).where(eq(documents.companyId, companyId));
+  }
+  async saveChatMessage(message: InsertChatMessage): Promise<ChatMessage> {
+    const [saved] = await db.insert(chatMessages).values(message).returning();
+    return saved;
+  }
+  async getChatMessages(companyId: number): Promise<ChatMessage[]> {
+    return await db.select().from(chatMessages).where(eq(chatMessages.companyId, companyId));
   }
 }
 

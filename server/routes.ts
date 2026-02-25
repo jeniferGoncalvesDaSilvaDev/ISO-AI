@@ -110,28 +110,31 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     const isoList = selections.map(s => s.isoCode);
     
     if (isoList.length === 0) {
-      return res.status(400).json({ message: "Select ISOs first before generating documents" });
+      return res.status(400).json({ message: "Selecione as ISOs primeiro antes de gerar os documentos" });
     }
 
     try {
-      const prompt = `Atue como um auditor e consultor sênior de certificação ISO.
-      Gere 3 documentos formais de certificação ISO para a seguinte empresa:
+      const prompt = `Atue como um Especialista Sênior e Auditor de Certificação ISO. Sua missão é fornecer consultoria de alto nível para empresas que buscam conformidade total.
+      
+      Gere 3 documentos formais e robustos de certificação ISO para a seguinte empresa:
       Nome: ${company.name}
       Setor: ${company.sector}
       Tamanho: ${company.size}
       Normas aplicáveis: ${isoList.join(', ')}. 
       
-      Os documentos devem ser:
-      1. Manual da Qualidade
-      2. Política da Empresa
-      3. Plano de Ação
+      IMPORTANTE: Se a empresa cresceu ou mudou de porte, adapte o conteúdo para a nova realidade operacional. Os documentos devem ser técnicos, precisos e prontos para auditoria.
       
-      Escreva o conteúdo de forma profissional e adaptado ao setor da empresa.
+      Os documentos devem ser:
+      1. Manual da Qualidade (ou Sistema de Gestão Integrado)
+      2. Política da Empresa (Compromisso com as normas selecionadas)
+      3. Plano de Ação Estratégico (Passos para implementação e manutenção)
+      
+      Escreva o conteúdo de forma profissional em Português Brasileiro.
       Retorne APENAS um JSON válido neste exato formato de array de objetos, sem formatação markdown extra ao redor:
       [
-        { "type": "Manual da Qualidade", "content": "conteúdo extenso aqui..." },
-        { "type": "Política da Empresa", "content": "conteúdo extenso aqui..." },
-        { "type": "Plano de Ação", "content": "conteúdo extenso aqui..." }
+        { "type": "Manual da Qualidade", "content": "conteúdo técnico e extenso aqui..." },
+        { "type": "Política da Empresa", "content": "conteúdo técnico e extenso aqui..." },
+        { "type": "Plano de Ação", "content": "conteúdo técnico e extenso aqui..." }
       ]`;
 
       const response = await ai.models.generateContent({
@@ -155,14 +158,14 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
 
       if (generatedDocs.length === 0) {
-        // Fallback in case Gemini responds weirdly
         generatedDocs = [
-          { type: "Manual da Qualidade", content: `Sistema de gestão criado automaticamente para ${company.name}.\nData: ${new Date().toLocaleDateString()}` },
-          { type: "Política da Empresa", content: `A empresa ${company.name} compromete-se com a melhoria contínua seguindo as normas ${isoList.join(', ')}.` },
-          { type: "Plano de Ação", content: `Plano inicial gerado para adequação das normas: ${isoList.join(', ')}.` }
+          { type: "Manual da Qualidade", content: `Sistema de gestão profissional criado por Especialista ISO para ${company.name}.\nData: ${new Date().toLocaleDateString()}` },
+          { type: "Política da Empresa", content: `A empresa ${company.name} estabelece sua política de excelência baseada nas normas ${isoList.join(', ')}.` },
+          { type: "Plano de Ação", content: `Roteiro estratégico para conformidade das normas: ${isoList.join(', ')}.` }
         ];
       }
 
+      // We allow regenerating documents, so we don't necessarily delete old ones but we mark them with createdAt
       const savedDocs = [];
       for (const d of generatedDocs) {
         const saved = await storage.saveDocument({ companyId: company.id, type: d.type, content: d.content });
@@ -172,7 +175,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       res.status(201).json(savedDocs);
     } catch (err) {
       console.error("AI Generation Error:", err);
-      res.status(500).json({ message: "Failed to generate documents with AI" });
+      res.status(500).json({ message: "Falha ao gerar documentos com a IA" });
     }
   });
 
@@ -180,6 +183,56 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     const companyId = Number(req.params.id);
     const docs = await storage.getDocuments(companyId);
     res.json(docs);
+  });
+
+  app.get(api.chat.list.path, async (req, res) => {
+    const companyId = Number(req.params.id);
+    const messages = await storage.getChatMessages(companyId);
+    res.json(messages);
+  });
+
+  app.post(api.chat.send.path, async (req, res) => {
+    const companyId = Number(req.params.id);
+    const { content } = req.body;
+    
+    try {
+      const company = await storage.getCompany(companyId);
+      if (!company) return res.status(404).json({ message: "Empresa não encontrada" });
+
+      const history = await storage.getChatMessages(companyId);
+      const selections = await storage.getIsoSelections(companyId);
+      const isoList = selections.map(s => s.isoCode);
+
+      // Save user message
+      const userMsg = await storage.saveChatMessage({ companyId, role: "user", content });
+
+      const prompt = `Você é um Consultor Especialista Sênior em Certificação ISO e Gestão de Qualidade. Sua missão é fornecer suporte diário e técnico para a empresa ${company.name} (${company.sector}).
+      
+      Contexto atual da empresa:
+      - Setor: ${company.sector}
+      - Tamanho: ${company.size}
+      - Normas de interesse: ${isoList.join(', ') || 'Nenhuma selecionada ainda'}
+      
+      Histórico de conversa:
+      ${history.map(m => `${m.role === 'user' ? 'Cliente' : 'Especialista'}: ${m.content}`).join('\n')}
+      
+      Cliente pergunta: ${content}
+      
+      Responda de forma profissional, acolhedora e altamente técnica, como um consultor real faria.`;
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3.1-pro-preview",
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+      });
+
+      const aiContent = response.text || "Desculpe, tive um problema ao processar sua solicitação.";
+      const assistantMsg = await storage.saveChatMessage({ companyId, role: "assistant", content: aiContent });
+
+      res.status(201).json(assistantMsg);
+    } catch (err) {
+      console.error("Chat Error:", err);
+      res.status(500).json({ message: "Erro no suporte via IA" });
+    }
   });
 
   seedDatabase().catch(console.error);

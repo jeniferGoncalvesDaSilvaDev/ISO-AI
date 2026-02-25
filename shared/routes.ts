@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { insertCompanySchema, insertIsoSelectionSchema, insertDocumentSchema, companies, isoSelections, documents } from "./schema";
+import { insertCompanySchema, insertIsoSelectionSchema, insertDocumentSchema, insertChatMessageSchema, companies, isoSelections, documents, chatMessages } from "./schema";
 
 export const errorSchemas = {
   validation: z.object({ message: z.string(), field: z.string().optional() }),
@@ -76,6 +76,25 @@ export const api = {
       path: "/api/companies/:id/documents" as const,
       responses: {
         200: z.array(z.custom<typeof documents.$inferSelect>())
+      }
+    }
+  },
+  chat: {
+    list: {
+      method: "GET" as const,
+      path: "/api/companies/:id/chat" as const,
+      responses: {
+        200: z.array(z.custom<typeof chatMessages.$inferSelect>())
+      }
+    },
+    send: {
+      method: "POST" as const,
+      path: "/api/companies/:id/chat" as const,
+      input: z.object({ content: z.string() }),
+      responses: {
+        201: z.custom<typeof chatMessages.$inferSelect>(),
+        400: errorSchemas.validation,
+        500: errorSchemas.internal
       }
     }
   }

@@ -3,13 +3,17 @@ import { useParams } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Building2, CheckSquare, FileText, Sparkles, AlertCircle, 
-  CheckCircle2, Download, FileSignature, Loader2 
+  CheckCircle2, Download, FileSignature, Loader2, Send, MessageCircle
 } from "lucide-react";
+import jsPDF from 'jspdf';
 
 import { useCompany } from "@/hooks/use-companies";
 import { useCompanyIsos, useRecommendIso, useSelectIso } from "@/hooks/use-iso";
 import { useCompanyDocuments, useGenerateDocuments } from "@/hooks/use-documents";
 import { useToast } from "@/hooks/use-toast";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { api, buildUrl } from "@shared/routes";
+import { apiRequest } from "@/lib/queryClient";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -18,6 +22,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const COMMON_ISOS = [
   { code: "ISO 9001", name: "Gestão da Qualidade" },
@@ -58,18 +64,22 @@ export default function CompanyDashboard() {
       </div>
 
       <Tabs defaultValue="iso" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 h-14 bg-muted/50 p-1 mb-8">
-          <TabsTrigger value="iso" className="data-[state=active]:bg-background data-[state=active]:shadow-sm text-base">
+        <TabsList className="grid w-full grid-cols-4 h-14 bg-muted/50 p-1 mb-8">
+          <TabsTrigger value="iso" className="data-[state=active]:bg-background data-[state=active]:shadow-sm text-sm md:text-base">
             <CheckSquare className="w-4 h-4 mr-2" />
             Selecionar ISOs
           </TabsTrigger>
-          <TabsTrigger value="generate" className="data-[state=active]:bg-background data-[state=active]:shadow-sm text-base">
+          <TabsTrigger value="generate" className="data-[state=active]:bg-background data-[state=active]:shadow-sm text-sm md:text-base">
             <Sparkles className="w-4 h-4 mr-2" />
             Geração por IA
           </TabsTrigger>
-          <TabsTrigger value="documents" className="data-[state=active]:bg-background data-[state=active]:shadow-sm text-base">
+          <TabsTrigger value="documents" className="data-[state=active]:bg-background data-[state=active]:shadow-sm text-sm md:text-base">
             <FileText className="w-4 h-4 mr-2" />
             Documentos
+          </TabsTrigger>
+          <TabsTrigger value="chat" className="data-[state=active]:bg-background data-[state=active]:shadow-sm text-sm md:text-base">
+            <MessageCircle className="w-4 h-4 mr-2" />
+            Suporte Especialista
           </TabsTrigger>
         </TabsList>
 
@@ -83,6 +93,10 @@ export default function CompanyDashboard() {
         
         <TabsContent value="documents">
           <ViewDocumentsTab companyId={company.id} />
+        </TabsContent>
+
+        <TabsContent value="chat">
+          <ChatSupportTab companyId={company.id} />
         </TabsContent>
       </Tabs>
     </div>
@@ -331,6 +345,37 @@ function GenerateDocumentsTab({ companyId }: { companyId: number }) {
 function ViewDocumentsTab({ companyId }: { companyId: number }) {
   const { data: documents, isLoading } = useCompanyDocuments(companyId);
 
+  const downloadPDF = (doc: any) => {
+    const pdf = new jsPDF();
+    const margin = 15;
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    
+    // Header
+    pdf.setFontSize(20);
+    pdf.setTextColor(0, 51, 102);
+    pdf.text(doc.type, margin, 25);
+    
+    pdf.setDrawColor(0, 51, 102);
+    pdf.line(margin, 28, pageWidth - margin, 28);
+    
+    // Content
+    pdf.setFontSize(11);
+    pdf.setTextColor(50, 50, 50);
+    
+    const splitContent = pdf.splitTextToSize(doc.content, pageWidth - (margin * 2));
+    pdf.text(splitContent, margin, 40);
+    
+    // Footer
+    const pageCount = pdf.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      pdf.setPage(i);
+      pdf.setFontSize(10);
+      pdf.text(`Gerado por ISO Genius AI Specialist - ${new Date().toLocaleDateString()}`, margin, pdf.internal.pageSize.getHeight() - 10);
+    }
+    
+    pdf.save(`${doc.type.replace(/\s+/g, '_')}_${companyId}.pdf`);
+  };
+
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -365,7 +410,12 @@ function ViewDocumentsTab({ companyId }: { companyId: number }) {
                 <Badge variant="outline" className="mb-2 bg-primary/5 text-primary border-primary/20">
                   {doc.type}
                 </Badge>
-                <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground group-hover:text-primary">
+                <Button 
+                  size="icon" 
+                  variant="ghost" 
+                  className="h-8 w-8 text-muted-foreground group-hover:text-primary"
+                  onClick={() => downloadPDF(doc)}
+                >
                   <Download className="w-4 h-4" />
                 </Button>
               </div>
@@ -379,11 +429,116 @@ function ViewDocumentsTab({ companyId }: { companyId: number }) {
             </CardContent>
             <CardFooter className="pt-0 pb-4 px-6 flex justify-between items-center text-sm text-muted-foreground">
               <span className="flex items-center"><CheckCircle2 className="w-4 h-4 mr-1 text-emerald-500" /> Pronto para Auditoria</span>
-              <Button variant="link" className="px-0">Ver Documento Completo</Button>
+              <Button variant="link" className="px-0" onClick={() => downloadPDF(doc)}>Baixar PDF</Button>
             </CardFooter>
           </Card>
         </motion.div>
       ))}
     </div>
+  );
+}
+
+// --- TAB 4: CHAT SUPPORT ---
+function ChatSupportTab({ companyId }: { companyId: number }) {
+  const queryClient = useQueryClient();
+  const [input, setInput] = useState("");
+
+  const { data: messages, isLoading } = useQuery<any[]>({
+    queryKey: [buildUrl(api.chat.list.path, { id: companyId })],
+  });
+
+  const chatMutation = useMutation({
+    mutationFn: async (content: string) => {
+      const res = await apiRequest("POST", buildUrl(api.chat.send.path, { id: companyId }), { content });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [buildUrl(api.chat.list.path, { id: companyId })] });
+      setInput("");
+    }
+  });
+
+  const handleSend = () => {
+    if (!input.trim() || chatMutation.isPending) return;
+    chatMutation.mutate(input);
+  };
+
+  return (
+    <Card className="border-border/60 shadow-lg flex flex-col h-[600px]">
+      <CardHeader className="border-b bg-muted/30">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+            <Sparkles className="w-5 h-5" />
+          </div>
+          <div>
+            <CardTitle className="text-lg">Suporte Especialista ISO</CardTitle>
+            <CardDescription>Tire suas dúvidas técnicas diariamente com nossa IA especializada.</CardDescription>
+          </div>
+        </div>
+      </CardHeader>
+      
+      <ScrollArea className="flex-1 p-6">
+        <div className="space-y-4">
+          {isLoading ? (
+            <div className="flex flex-col gap-4">
+              <Skeleton className="h-12 w-2/3 rounded-2xl" />
+              <Skeleton className="h-12 w-2/3 self-end rounded-2xl" />
+            </div>
+          ) : messages?.length === 0 ? (
+            <div className="text-center py-10">
+              <MessageCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-20" />
+              <p className="text-muted-foreground">Olá! Sou seu especialista ISO. Como posso ajudar com sua certificação hoje?</p>
+            </div>
+          ) : (
+            messages?.map((msg, i) => (
+              <div 
+                key={msg.id} 
+                className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
+              >
+                <div 
+                  className={`max-w-[80%] p-4 rounded-2xl ${
+                    msg.role === 'user' 
+                      ? 'bg-primary text-primary-foreground rounded-tr-none' 
+                      : 'bg-muted text-foreground rounded-tl-none border border-border/50'
+                  }`}
+                >
+                  <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                </div>
+                <span className="text-[10px] text-muted-foreground mt-1 px-1">
+                  {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </span>
+              </div>
+            ))
+          )}
+          {chatMutation.isPending && (
+            <div className="flex items-start">
+              <div className="bg-muted p-4 rounded-2xl rounded-tl-none border border-border/50">
+                <Loader2 className="w-4 h-4 animate-spin text-primary" />
+              </div>
+            </div>
+          )}
+        </div>
+      </ScrollArea>
+
+      <CardFooter className="p-4 border-t bg-muted/10">
+        <div className="flex w-full gap-2">
+          <Input 
+            placeholder="Digite sua dúvida técnica..." 
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+            disabled={chatMutation.isPending}
+            className="flex-1 h-12"
+          />
+          <Button 
+            onClick={handleSend} 
+            disabled={chatMutation.isPending || !input.trim()}
+            className="h-12 px-6"
+          >
+            {chatMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+          </Button>
+        </div>
+      </CardFooter>
+    </Card>
   );
 }
