@@ -64,20 +64,20 @@ export default function CompanyDashboard() {
       </div>
 
       <Tabs defaultValue="iso" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 h-14 bg-muted/50 p-1 mb-8">
-          <TabsTrigger value="iso" className="data-[state=active]:bg-background data-[state=active]:shadow-sm text-sm md:text-base">
+        <TabsList className="flex flex-wrap h-auto bg-muted/50 p-1 mb-8 gap-1">
+          <TabsTrigger value="iso" className="flex-1 min-w-[140px] data-[state=active]:bg-background data-[state=active]:shadow-sm text-sm md:text-base py-3">
             <CheckSquare className="w-4 h-4 mr-2" />
             Selecionar ISOs
           </TabsTrigger>
-          <TabsTrigger value="generate" className="data-[state=active]:bg-background data-[state=active]:shadow-sm text-sm md:text-base">
+          <TabsTrigger value="generate" className="flex-1 min-w-[140px] data-[state=active]:bg-background data-[state=active]:shadow-sm text-sm md:text-base py-3">
             <Sparkles className="w-4 h-4 mr-2" />
             Geração por IA
           </TabsTrigger>
-          <TabsTrigger value="documents" className="data-[state=active]:bg-background data-[state=active]:shadow-sm text-sm md:text-base">
+          <TabsTrigger value="documents" className="flex-1 min-w-[140px] data-[state=active]:bg-background data-[state=active]:shadow-sm text-sm md:text-base py-3">
             <FileText className="w-4 h-4 mr-2" />
             Documentos
           </TabsTrigger>
-          <TabsTrigger value="chat" className="data-[state=active]:bg-background data-[state=active]:shadow-sm text-sm md:text-base">
+          <TabsTrigger value="chat" className="flex-1 min-w-[140px] data-[state=active]:bg-background data-[state=active]:shadow-sm text-sm md:text-base py-3">
             <MessageCircle className="w-4 h-4 mr-2" />
             Suporte Especialista
           </TabsTrigger>
@@ -140,6 +140,8 @@ function IsoSelectionTab({ company }: { company: any }) {
   };
 
   const handleSave = async () => {
+    if (selectMutation.isPending) return;
+    
     selectMutation.mutate({ companyId: company.id, isos: selectedIsos }, {
       onSuccess: () => {
         toast({
@@ -150,8 +152,13 @@ function IsoSelectionTab({ company }: { company: any }) {
         queryClient.invalidateQueries({ queryKey: [buildUrl(api.iso.list.path, { id: company.id })] });
         queryClient.invalidateQueries({ queryKey: [buildUrl(api.documents.list.path, { id: company.id })] });
       },
-      onError: () => {
-        toast({ variant: "destructive", title: "Falha ao salvar seleções" });
+      onError: (error: any) => {
+        console.error("Save Error Detail:", error);
+        toast({ 
+          variant: "destructive", 
+          title: "Falha ao salvar seleções",
+          description: error.message || "Erro de conexão com o servidor."
+        });
       }
     });
   };
