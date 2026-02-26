@@ -144,18 +144,11 @@ function IsoSelectionTab({ company }: { company: any }) {
       onSuccess: () => {
         toast({
           title: "Seleções Salvas",
-          description: "Iniciando geração automática da documentação...",
+          description: "As normas foram vinculadas e a documentação está sendo gerada pela IA.",
         });
-        
-        // Auto-trigger document generation after saving ISOs
-        generateMutation.mutate(company.id, {
-          onSuccess: () => {
-            toast({
-              title: "Sucesso!",
-              description: "Documentação e certificação geradas com sucesso pela IA.",
-            });
-          }
-        });
+        // Invalidate queries to refresh UI
+        queryClient.invalidateQueries({ queryKey: [buildUrl(api.iso.list.path, { id: company.id })] });
+        queryClient.invalidateQueries({ queryKey: [buildUrl(api.documents.list.path, { id: company.id })] });
       },
       onError: () => {
         toast({ variant: "destructive", title: "Falha ao salvar seleções" });

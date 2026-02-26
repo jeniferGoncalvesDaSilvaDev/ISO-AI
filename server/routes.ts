@@ -84,12 +84,51 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const companyId = Number(req.params.id);
       const input = api.iso.select.input.parse(req.body);
       const selections = await storage.saveIsoSelections(companyId, input.isos);
+      
+      // Return immediately to avoid blocking the client
       res.status(201).json(selections);
+      
+      // Trigger background document generation
+      (async () => {
+        try {
+          const company = await storage.getCompany(companyId);
+          if (!company) return;
+
+          const prompt = `Atue como um Especialista Sênior e Auditor de Certificação ISO. 
+          Gere 3 documentos formais para a empresa ${company.name} (${company.sector}), tamanho ${company.size}.
+          Normas: ${input.isos.join(', ')}.
+          
+          Retorne APENAS um JSON válido de array de objetos:
+          [
+            { "type": "Manual da Qualidade", "content": "..." },
+            { "type": "Política da Empresa", "content": "..." },
+            { "type": "Plano de Ação", "content": "..." }
+          ]`;
+
+          const response = await ai.models.generateContent({
+            model: "gemini-3.1-pro-preview",
+            contents: [{ role: "user", parts: [{ text: prompt }] }],
+          });
+
+          const text = response.text || "";
+          const jsonStart = text.indexOf('[');
+          const jsonEnd = text.lastIndexOf(']') + 1;
+          
+          if (jsonStart !== -1 && jsonEnd !== -1) {
+            const generatedDocs = JSON.parse(text.slice(jsonStart, jsonEnd));
+            for (const d of generatedDocs) {
+              await storage.saveDocument({ companyId, type: d.type, content: d.content });
+            }
+          }
+        } catch (e) {
+          console.error("Background Generation Error:", e);
+        }
+      })();
     } catch (err) {
       if (err instanceof z.ZodError) {
         return res.status(400).json({ message: err.errors[0].message });
       }
-      throw err;
+      res.status(500).json({ message: "Erro ao salvar seleções" });
     }
   });
 
