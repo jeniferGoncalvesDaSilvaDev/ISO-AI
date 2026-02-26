@@ -127,8 +127,11 @@ function IsoSelectionTab({ company }: { company: any }) {
         setSelectedIsos(Array.from(newSet));
         toast({
           title: "Recomendações da IA prontas",
-          description: `Normas sugeridas com base em '${company.sector}' foram selecionadas.`,
+          description: `Normas sugeridas com base em '${company.sector}' foram selecionadas. Salvando e gerando documentos...`,
         });
+        
+        // Auto-save and generate after recommendation
+        handleSave();
       },
       onError: () => {
         toast({ variant: "destructive", title: "Falha ao obter recomendações" });
@@ -136,12 +139,22 @@ function IsoSelectionTab({ company }: { company: any }) {
     });
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     selectMutation.mutate({ companyId: company.id, isos: selectedIsos }, {
       onSuccess: () => {
         toast({
           title: "Seleções Salvas",
-          description: "Suas normas ISO alvo foram atualizadas.",
+          description: "Iniciando geração automática da documentação...",
+        });
+        
+        // Auto-trigger document generation after saving ISOs
+        generateMutation.mutate(company.id, {
+          onSuccess: () => {
+            toast({
+              title: "Sucesso!",
+              description: "Documentação e certificação geradas com sucesso pela IA.",
+            });
+          }
         });
       },
       onError: () => {
@@ -344,6 +357,19 @@ function GenerateDocumentsTab({ companyId }: { companyId: number }) {
 // --- TAB 3: VIEW DOCUMENTS ---
 function ViewDocumentsTab({ companyId }: { companyId: number }) {
   const { data: documents, isLoading } = useCompanyDocuments(companyId);
+  const generateMutation = useGenerateDocuments();
+  const { toast } = useToast();
+
+  const handleManualRegenerate = () => {
+    generateMutation.mutate(companyId, {
+      onSuccess: () => {
+        toast({
+          title: "Documentação Atualizada",
+          description: "Os documentos foram regerados com base nas configurações atuais.",
+        });
+      }
+    });
+  };
 
   const downloadPDF = (doc: any) => {
     const pdf = new jsPDF();
@@ -351,26 +377,38 @@ function ViewDocumentsTab({ companyId }: { companyId: number }) {
     const pageWidth = pdf.internal.pageSize.getWidth();
     
     // Header
-    pdf.setFontSize(20);
+    pdf.setFontSize(22);
     pdf.setTextColor(0, 51, 102);
-    pdf.text(doc.type, margin, 25);
+    pdf.text("CERTIFICADO DE CONFORMIDADE", margin, 25);
+    
+    pdf.setFontSize(16);
+    pdf.text(doc.type, margin, 35);
     
     pdf.setDrawColor(0, 51, 102);
-    pdf.line(margin, 28, pageWidth - margin, 28);
+    pdf.setLineWidth(0.5);
+    pdf.line(margin, 40, pageWidth - margin, 40);
     
     // Content
     pdf.setFontSize(11);
     pdf.setTextColor(50, 50, 50);
     
     const splitContent = pdf.splitTextToSize(doc.content, pageWidth - (margin * 2));
-    pdf.text(splitContent, margin, 40);
+    pdf.text(splitContent, margin, 55);
     
-    // Footer
+    // Footer / Seal
     const pageCount = pdf.internal.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
       pdf.setPage(i);
       pdf.setFontSize(10);
-      pdf.text(`Gerado por ISO Genius AI Specialist - ${new Date().toLocaleDateString()}`, margin, pdf.internal.pageSize.getHeight() - 10);
+      pdf.setTextColor(150, 150, 150);
+      pdf.text(`ISO Genius AI Specialist - Documento Oficial de Certificação`, margin, pdf.internal.pageSize.getHeight() - 20);
+      pdf.text(`Data de Emissão: ${new Date().toLocaleDateString()} | ID: ${doc.id}`, margin, pdf.internal.pageSize.getHeight() - 15);
+      
+      // Add a simple "Seal" effect
+      pdf.setDrawColor(0, 102, 204);
+      pdf.rect(pageWidth - 50, pdf.internal.pageSize.getHeight() - 40, 35, 25);
+      pdf.setFontSize(8);
+      pdf.text("IA VALIDATED", pageWidth - 47, pdf.internal.pageSize.getHeight() - 25);
     }
     
     pdf.save(`${doc.type.replace(/\s+/g, '_')}_${companyId}.pdf`);
@@ -389,51 +427,62 @@ function ViewDocumentsTab({ companyId }: { companyId: number }) {
       <div className="py-20 text-center border border-dashed border-border rounded-xl bg-muted/10">
         <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-50" />
         <h3 className="text-xl font-semibold mb-2">Nenhum documento encontrado</h3>
-        <p className="text-muted-foreground">Vá para a aba de Geração por IA para criar seus documentos de conformidade.</p>
+        <p className="text-muted-foreground mb-6">Inicie a geração automática clicando no botão abaixo.</p>
+        <Button onClick={handleManualRegenerate} disabled={generateMutation.isPending}>
+          {generateMutation.isPending ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Gerando...</> : <><Sparkles className="w-4 h-4 mr-2" /> Gerar Documentação Agora</>}
+        </Button>
       </div>
     );
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      {documents.map((doc, i) => (
-        <motion.div
-          key={doc.id}
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: i * 0.05 }}
-        >
-          <Card className="h-full flex flex-col hover-elevate border-border/60 overflow-hidden group">
-            <div className="h-2 bg-gradient-to-r from-primary to-accent-foreground w-full"></div>
-            <CardHeader className="pb-3">
-              <div className="flex justify-between items-start">
-                <Badge variant="outline" className="mb-2 bg-primary/5 text-primary border-primary/20">
-                  {doc.type}
-                </Badge>
-                <Button 
-                  size="icon" 
-                  variant="ghost" 
-                  className="h-8 w-8 text-muted-foreground group-hover:text-primary"
-                  onClick={() => downloadPDF(doc)}
-                >
-                  <Download className="w-4 h-4" />
-                </Button>
-              </div>
-              <CardTitle className="text-xl">Documento de Política</CardTitle>
-            </CardHeader>
-            <CardContent className="flex-1">
-              <div className="text-sm text-muted-foreground bg-muted/40 p-4 rounded-lg border border-border/50 h-32 overflow-hidden relative">
-                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-muted/40 z-10 pointer-events-none"></div>
-                <pre className="font-sans whitespace-pre-wrap">{doc.content}</pre>
-              </div>
-            </CardContent>
-            <CardFooter className="pt-0 pb-4 px-6 flex justify-between items-center text-sm text-muted-foreground">
-              <span className="flex items-center"><CheckCircle2 className="w-4 h-4 mr-1 text-emerald-500" /> Pronto para Auditoria</span>
-              <Button variant="link" className="px-0" onClick={() => downloadPDF(doc)}>Baixar PDF</Button>
-            </CardFooter>
-          </Card>
-        </motion.div>
-      ))}
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h3 className="text-lg font-semibold">Documentos de Conformidade</h3>
+        <Button variant="outline" size="sm" onClick={handleManualRegenerate} disabled={generateMutation.isPending}>
+          {generateMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Sparkles className="w-4 h-4 mr-2 text-primary" /> Atualizar Tudo</>}
+        </Button>
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {documents.map((doc, i) => (
+          <motion.div
+            key={doc.id}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.05 }}
+          >
+            <Card className="h-full flex flex-col hover-elevate border-border/60 overflow-hidden group">
+              <div className="h-2 bg-gradient-to-r from-primary to-accent-foreground w-full"></div>
+              <CardHeader className="pb-3">
+                <div className="flex justify-between items-start">
+                  <Badge variant="outline" className="mb-2 bg-primary/5 text-primary border-primary/20">
+                    {doc.type}
+                  </Badge>
+                  <Button 
+                    size="icon" 
+                    variant="ghost" 
+                    className="h-8 w-8 text-muted-foreground group-hover:text-primary"
+                    onClick={() => downloadPDF(doc)}
+                  >
+                    <Download className="w-4 h-4" />
+                  </Button>
+                </div>
+                <CardTitle className="text-xl">Documento de Política</CardTitle>
+              </CardHeader>
+              <CardContent className="flex-1">
+                <div className="text-sm text-muted-foreground bg-muted/40 p-4 rounded-lg border border-border/50 h-32 overflow-hidden relative">
+                  <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-muted/40 z-10 pointer-events-none"></div>
+                  <pre className="font-sans whitespace-pre-wrap">{doc.content}</pre>
+                </div>
+              </CardContent>
+              <CardFooter className="pt-0 pb-4 px-6 flex justify-between items-center text-sm text-muted-foreground">
+                <span className="flex items-center"><CheckCircle2 className="w-4 h-4 mr-1 text-emerald-500" /> Pronto para Auditoria</span>
+                <Button variant="link" className="px-0" onClick={() => downloadPDF(doc)}>Baixar PDF</Button>
+              </CardFooter>
+            </Card>
+          </motion.div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -490,7 +539,7 @@ function ChatSupportTab({ companyId }: { companyId: number }) {
               <p className="text-muted-foreground">Olá! Sou seu especialista ISO. Como posso ajudar com sua certificação hoje?</p>
             </div>
           ) : (
-            messages?.map((msg, i) => (
+            messages?.map((msg) => (
               <div 
                 key={msg.id} 
                 className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
@@ -513,7 +562,7 @@ function ChatSupportTab({ companyId }: { companyId: number }) {
           {chatMutation.isPending && (
             <div className="flex items-start">
               <div className="bg-muted p-4 rounded-2xl rounded-tl-none border border-border/50">
-                <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                <Loader2 className="h-4 h-4 animate-spin text-primary" />
               </div>
             </div>
           )}
