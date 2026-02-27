@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { companies, isoSelections, documents, type Company, type InsertCompany, type IsoSelection, type InsertIsoSelection, type Document, type InsertDocument } from "@shared/schema";
+import { companies, isoSelections, documents, chatMessages, type Company, type InsertCompany, type IsoSelection, type InsertIsoSelection, type Document, type InsertDocument, type ChatMessage, type InsertChatMessage } from "@shared/schema";
 import { eq } from "drizzle-orm";
 
 export interface IStorage {
