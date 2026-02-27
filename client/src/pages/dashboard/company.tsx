@@ -106,6 +106,7 @@ export default function CompanyDashboard() {
 // --- TAB 1: ISO SELECTION ---
 function IsoSelectionTab({ company }: { company: any }) {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const { data: savedIsos, isLoading: isosLoading } = useCompanyIsos(company.id);
   const recommendMutation = useRecommendIso();
   const selectMutation = useSelectIso();
