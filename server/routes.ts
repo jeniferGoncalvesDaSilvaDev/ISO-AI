@@ -241,6 +241,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const history = await storage.getChatMessages(companyId);
       const selections = await storage.getIsoSelections(companyId);
       const isoList = selections.map(s => s.isoCode);
+      const docs = await storage.getDocuments(companyId);
 
       // Save user message
       const userMsg = await storage.saveChatMessage({ companyId, role: "user", content });
@@ -252,12 +253,15 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       - Tamanho: ${company.size}
       - Normas de interesse: ${isoList.join(', ') || 'Nenhuma selecionada ainda'}
       
+      Documentos Já Gerados pela IA para Consulta:
+      ${docs.map(d => `--- ${d.type} ---\n${d.content}`).join('\n\n')}
+      
       Histórico de conversa:
       ${history.map(m => `${m.role === 'user' ? 'Cliente' : 'Especialista'}: ${m.content}`).join('\n')}
       
       Cliente pergunta: ${content}
       
-      Responda de forma profissional, acolhedora e altamente técnica, como um consultor real faria.`;
+      Responda de forma profissional, acolhedora e altamente técnica. Se o cliente perguntar algo sobre os documentos acima, use o conteúdo deles para responder.`;
 
       const response = await ai.models.generateContent({
         model: "gemini-3.1-pro-preview",
