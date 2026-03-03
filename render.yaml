@@ -1,0 +1,11 @@
+# render.yaml
+
+services:
+  - type: web
+    name: iso-ai
+    env: node
+    src: ./frontend   # adjust the path if needed
+    buildCommand: "npm install && npm run build"  # build command for React
+    startCommand: "npm start"  # start command for Express
+    plan: free
+    region: oregon
