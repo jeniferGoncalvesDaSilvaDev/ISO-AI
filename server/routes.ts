@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
 import { GoogleGenAI } from "@google/genai";
+import crypto from "crypto";
 
 // Initialize Gemini via Replit AI Integrations
 const ai = new GoogleGenAI({
@@ -42,10 +43,62 @@ async function seedDatabase() {
 }
 
 export async function registerRoutes(httpServer: Server, app: Express): Promise<Server> {
+  // REGISTER - POST /api/auth/register
+  app.post("/api/auth/register", async (req, res) => {
+    try {
+      const { email, password } = req.body;
+      if (!email || !password) {
+        return res.status(400).json({ message: "Email e senha são obrigatórios" });
+      }
+      
+      const existingUser = await storage.getUserByEmail(email);
+      if (existingUser) {
+        return res.status(400).json({ message: "Este email já está registrado" });
+      }
+      
+      const hashedPassword = crypto.createHash("sha256").update(password + email).digest("hex");
+      const user = await storage.createUser({ email, password: hashedPassword });
+      
+      // Gerar token simples (em produção usar JWT)
+      const token = Buffer.from(`${user.id}:${Date.now()}`).toString("base64");
+      res.json({ token, userId: user.id, email: user.email });
+    } catch (err) {
+      console.error("Register error:", err);
+      res.status(500).json({ message: "Erro ao registrar usuário" });
+    }
+  });
+
+  // LOGIN - POST /api/auth/login
+  app.post("/api/auth/login", async (req, res) => {
+    try {
+      const { email, password } = req.body;
+      if (!email || !password) {
+        return res.status(400).json({ message: "Email e senha são obrigatórios" });
+      }
+      
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        return res.status(401).json({ message: "Email ou senha inválidos" });
+      }
+      
+      const hashedPassword = crypto.createHash("sha256").update(password + email).digest("hex");
+      if (hashedPassword !== user.password) {
+        return res.status(401).json({ message: "Email ou senha inválidos" });
+      }
+      
+      const token = Buffer.from(`${user.id}:${Date.now()}`).toString("base64");
+      res.json({ token, userId: user.id, email: user.email });
+    } catch (err) {
+      console.error("Login error:", err);
+      res.status(500).json({ message: "Erro ao fazer login" });
+    }
+  });
+
   app.post(api.companies.create.path, async (req, res) => {
     try {
       const input = api.companies.create.input.parse(req.body);
-      const company = await storage.createCompany(input);
+      const userId = req.body.userId || 1; // Pega do body ou usa 1 como padrão
+      const company = await storage.createCompany({ ...input, userId });
       res.status(201).json(company);
     } catch (err) {
       if (err instanceof z.ZodError) {
@@ -56,7 +109,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   });
 
   app.get(api.companies.list.path, async (req, res) => {
-    const companies = await storage.getCompanies();
+    const userId = req.query.userId ? Number(req.query.userId) : 1;
+    const companies = await storage.getCompaniesByUser(userId);
     res.json(companies);
   });
 

@@ -8,14 +8,18 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import Onboarding from "@/pages/onboarding";
+import AuthPage from "@/pages/auth";
 import DashboardIndex from "@/pages/dashboard/index";
 import CompanyDashboard from "@/pages/dashboard/company";
 import { AppSidebar } from "@/components/app-sidebar";
 
 function Router() {
+  const userId = localStorage.getItem("userId");
+
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/auth" component={AuthPage} />
       <Route path="/onboarding" component={Onboarding} />
       
       {/* Dashboard Routes wrapped in Sidebar layout */}

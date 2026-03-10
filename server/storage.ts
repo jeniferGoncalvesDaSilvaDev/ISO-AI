@@ -1,10 +1,13 @@
 import { db } from "./db";
-import { companies, isoSelections, documents, chatMessages, type Company, type InsertCompany, type IsoSelection, type InsertIsoSelection, type Document, type InsertDocument, type ChatMessage, type InsertChatMessage } from "@shared/schema";
+import { users, companies, isoSelections, documents, chatMessages, type User, type InsertUser, type Company, type InsertCompany, type IsoSelection, type InsertIsoSelection, type Document, type InsertDocument, type ChatMessage, type InsertChatMessage } from "@shared/schema";
 import { eq } from "drizzle-orm";
 
 export interface IStorage {
+  createUser(user: InsertUser): Promise<User>;
+  getUserByEmail(email: string): Promise<User | undefined>;
+  getUser(id: number): Promise<User | undefined>;
   createCompany(company: InsertCompany): Promise<Company>;
-  getCompanies(): Promise<Company[]>;
+  getCompaniesByUser(userId: number): Promise<Company[]>;
   getCompany(id: number): Promise<Company | undefined>;
   saveIsoSelections(companyId: number, isos: string[]): Promise<IsoSelection[]>;
   getIsoSelections(companyId: number): Promise<IsoSelection[]>;
@@ -15,12 +18,24 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const [user] = await db.insert(users).values(insertUser).returning();
+    return user;
+  }
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user;
+  }
+  async getUser(id: number): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
+  }
   async createCompany(insertCompany: InsertCompany): Promise<Company> {
     const [company] = await db.insert(companies).values(insertCompany).returning();
     return company;
   }
-  async getCompanies(): Promise<Company[]> {
-    return await db.select().from(companies);
+  async getCompaniesByUser(userId: number): Promise<Company[]> {
+    return await db.select().from(companies).where(eq(companies.userId, userId));
   }
   async getCompany(id: number): Promise<Company | undefined> {
     const [company] = await db.select().from(companies).where(eq(companies.id, id));
