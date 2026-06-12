@@ -15,8 +15,9 @@ async function callGemini(prompt: string): Promise<string> {
   }
 
   const models = [
-    "mistralai/mistral-7b-instruct",
+    "mistralai/mistral-small-3.2-24b-instruct:free",
     "meta-llama/llama-3-8b-instruct:free",
+    "mistralai/mistral-7b-instruct:free",
   ];
 
   for (const model of models) {
