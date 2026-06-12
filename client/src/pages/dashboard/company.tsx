@@ -250,22 +250,25 @@ function GenerateDocumentsTab({ companyId }: { companyId: number }) {
   const { toast } = useToast();
   const generateMutation = useGenerateDocuments();
   const { data: savedIsos } = useCompanyIsos(companyId);
+  const [gerado, setGerado] = useState(false);
 
   const handleGenerate = () => {
     if (!savedIsos || savedIsos.length === 0) {
       toast({
         variant: "destructive",
         title: "Nenhuma ISO selecionada",
-        description: "Por favor, selecione as normas alvo na primeira aba antes de gerar os documentos.",
+        description: "Selecione as normas alvo na primeira aba antes de gerar os documentos.",
       });
       return;
     }
 
+    setGerado(false);
     generateMutation.mutate(companyId, {
       onSuccess: () => {
+        setGerado(true);
         toast({
-          title: "Documentos Gerados!",
-          description: "A IA criou com sucesso sua documentação de conformidade.",
+          title: "✅ Documentação Gerada!",
+          description: "Acesse a aba Documentos para visualizar e baixar.",
         });
       },
       onError: (err) => {
@@ -305,7 +308,17 @@ function GenerateDocumentsTab({ companyId }: { companyId: number }) {
             <Alert variant="destructive" className="mt-6">
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>Ação Necessária</AlertTitle>
-              <AlertDescription>Você deve selecionar pelo menos uma norma ISO primeiro.</AlertDescription>
+              <AlertDescription>Selecione pelo menos uma norma ISO primeiro.</AlertDescription>
+            </Alert>
+          )}
+
+          {gerado && (
+            <Alert className="mt-6 border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-300">
+              <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+              <AlertTitle className="text-emerald-800 dark:text-emerald-300">Documentação Gerada com Sucesso!</AlertTitle>
+              <AlertDescription className="text-emerald-700 dark:text-emerald-400">
+                Acesse a aba <strong>Documentos</strong> para visualizar e baixar os arquivos em PDF.
+              </AlertDescription>
             </Alert>
           )}
         </div>
@@ -319,12 +332,20 @@ function GenerateDocumentsTab({ companyId }: { companyId: number }) {
                 <Sparkles className="absolute inset-0 m-auto w-10 h-10 text-primary animate-pulse" />
               </div>
               <h3 className="text-xl font-bold mb-2">A IA está trabalhando...</h3>
-              <p className="text-sm text-muted-foreground">Redigindo políticas de conformidade abrangentes e adaptadas às restrições exatas do seu setor.</p>
+              <p className="text-sm text-muted-foreground">Redigindo políticas de conformidade abrangentes adaptadas ao seu setor.</p>
               <div className="mt-8 space-y-3 text-left">
                 <Skeleton className="h-4 w-full" />
                 <Skeleton className="h-4 w-5/6" />
                 <Skeleton className="h-4 w-4/6" />
               </div>
+            </div>
+          ) : gerado ? (
+            <div className="text-center w-full max-w-sm">
+              <div className="w-24 h-24 mx-auto bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center mb-6">
+                <CheckCircle2 className="w-12 h-12 text-emerald-600" />
+              </div>
+              <h3 className="text-xl font-bold mb-2 text-emerald-700 dark:text-emerald-400">Documentos Prontos!</h3>
+              <p className="text-sm text-muted-foreground">Seus documentos de conformidade ISO foram gerados com sucesso pela IA.</p>
             </div>
           ) : (
             <div className="text-center">
