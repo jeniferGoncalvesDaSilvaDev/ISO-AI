@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useParams } from "wouter";
-import { motion, AnimatePresence } from "framer-motion";
 import { 
   Building2, CheckSquare, FileText, Sparkles, AlertCircle, 
   CheckCircle2, Download, FileSignature, Loader2, Send, MessageCircle
@@ -312,43 +311,29 @@ function GenerateDocumentsTab({ companyId }: { companyId: number }) {
         </div>
         
         <div className="bg-muted/30 p-8 flex items-center justify-center border-l border-border/50 relative overflow-hidden">
-          <AnimatePresence mode="wait">
-            {isGenerating ? (
-              <motion.div 
-                key="generating"
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0 }}
-                className="text-center w-full max-w-sm"
-              >
-                <div className="relative w-32 h-32 mx-auto mb-8">
-                  <div className="absolute inset-0 border-4 border-primary/20 rounded-full"></div>
-                  <div className="absolute inset-0 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-                  <Sparkles className="absolute inset-0 m-auto w-10 h-10 text-primary animate-pulse" />
-                </div>
-                <h3 className="text-xl font-bold mb-2">A IA está trabalhando...</h3>
-                <p className="text-sm text-muted-foreground">Redigindo políticas de conformidade abrangentes e adaptadas às restrições exatas do seu setor.</p>
-                
-                <div className="mt-8 space-y-3 text-left">
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-5/6" />
-                  <Skeleton className="h-4 w-4/6" />
-                </div>
-              </motion.div>
-            ) : (
-              <motion.div 
-                key="idle"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="text-center"
-              >
-                <div className="w-24 h-24 mx-auto bg-card rounded-2xl shadow-sm border border-border/50 flex items-center justify-center mb-6 transform -rotate-6">
-                  <FileText className="w-10 h-10 text-muted-foreground/50" />
-                </div>
-                <p className="text-muted-foreground font-medium">Pronto para compilar documentos</p>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          {isGenerating ? (
+            <div className="text-center w-full max-w-sm">
+              <div className="relative w-32 h-32 mx-auto mb-8">
+                <div className="absolute inset-0 border-4 border-primary/20 rounded-full"></div>
+                <div className="absolute inset-0 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+                <Sparkles className="absolute inset-0 m-auto w-10 h-10 text-primary animate-pulse" />
+              </div>
+              <h3 className="text-xl font-bold mb-2">A IA está trabalhando...</h3>
+              <p className="text-sm text-muted-foreground">Redigindo políticas de conformidade abrangentes e adaptadas às restrições exatas do seu setor.</p>
+              <div className="mt-8 space-y-3 text-left">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-5/6" />
+                <Skeleton className="h-4 w-4/6" />
+              </div>
+            </div>
+          ) : (
+            <div className="text-center">
+              <div className="w-24 h-24 mx-auto bg-card rounded-2xl shadow-sm border border-border/50 flex items-center justify-center mb-6 transform -rotate-6">
+                <FileText className="w-10 h-10 text-muted-foreground/50" />
+              </div>
+              <p className="text-muted-foreground font-medium">Pronto para compilar documentos</p>
+            </div>
+          )}
         </div>
       </div>
     </Card>
@@ -445,13 +430,8 @@ function ViewDocumentsTab({ companyId }: { companyId: number }) {
         </Button>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {documents.map((doc, i) => (
-          <motion.div
-            key={doc.id}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.05 }}
-          >
+        {documents.map((doc) => (
+          <div key={doc.id}>
             <Card className="h-full flex flex-col hover-elevate border-border/60 overflow-hidden group">
               <div className="h-2 bg-gradient-to-r from-primary to-accent-foreground w-full"></div>
               <CardHeader className="pb-3">
@@ -481,7 +461,7 @@ function ViewDocumentsTab({ companyId }: { companyId: number }) {
                 <Button variant="link" className="px-0" onClick={() => downloadPDF(doc)}>Baixar PDF</Button>
               </CardFooter>
             </Card>
-          </motion.div>
+          </div>
         ))}
       </div>
     </div>
