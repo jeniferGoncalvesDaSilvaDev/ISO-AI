@@ -35,15 +35,24 @@ const COMMON_ISOS = [
 export default function CompanyDashboard() {
   const { id } = useParams<{ id: string }>();
   const companyId = parseInt(id);
-  
+
   const { data: company, isLoading: companyLoading } = useCompany(companyId);
-  
+
   if (companyLoading) {
-    return <div className="p-10"><Skeleton className="h-12 w-64 mb-8" /><Skeleton className="h-[400px] w-full" /></div>;
+    return (
+      <div className="p-10">
+        <Skeleton className="h-12 w-64 mb-8" />
+        <Skeleton className="h-[400px] w-full" />
+      </div>
+    );
   }
-  
+
   if (!company) {
-    return <div className="p-10 text-center"><h2 className="text-2xl font-bold">Empresa não encontrada</h2></div>;
+    return (
+      <div className="p-10 text-center">
+        <h2 className="text-2xl font-bold"><span>Empresa não encontrada</span></h2>
+      </div>
+    );
   }
 
   return (
@@ -53,11 +62,17 @@ export default function CompanyDashboard() {
           <div className="p-2 bg-primary/10 rounded-lg">
             <Building2 className="w-6 h-6 text-primary" />
           </div>
-          <h1 className="text-3xl font-bold font-display text-foreground">{company.name}</h1>
+          <h1 className="text-3xl font-bold font-display text-foreground">
+            <span>{company.name}</span>
+          </h1>
         </div>
         <div className="flex gap-3 mt-4">
-          <Badge variant="secondary" className="px-3 py-1">Setor: {company.sector}</Badge>
-          <Badge variant="outline" className="px-3 py-1 bg-background">Tamanho: {company.size}</Badge>
+          <Badge variant="secondary" className="px-3 py-1">
+            <span>Setor: {company.sector}</span>
+          </Badge>
+          <Badge variant="outline" className="px-3 py-1 bg-background">
+            <span>Tamanho: {company.size}</span>
+          </Badge>
         </div>
       </div>
 
@@ -65,30 +80,30 @@ export default function CompanyDashboard() {
         <TabsList className="flex flex-wrap h-auto bg-muted/50 p-1 mb-8 gap-1">
           <TabsTrigger value="iso" className="flex-1 min-w-[140px] data-[state=active]:bg-background data-[state=active]:shadow-sm text-sm md:text-base py-3">
             <CheckSquare className="w-4 h-4 mr-2" />
-            Selecionar ISOs
+            <span>Selecionar ISOs</span>
           </TabsTrigger>
           <TabsTrigger value="generate" className="flex-1 min-w-[140px] data-[state=active]:bg-background data-[state=active]:shadow-sm text-sm md:text-base py-3">
             <Sparkles className="w-4 h-4 mr-2" />
-            Geração por IA
+            <span>Geração por IA</span>
           </TabsTrigger>
           <TabsTrigger value="documents" className="flex-1 min-w-[140px] data-[state=active]:bg-background data-[state=active]:shadow-sm text-sm md:text-base py-3">
             <FileText className="w-4 h-4 mr-2" />
-            Documentos
+            <span>Documentos</span>
           </TabsTrigger>
           <TabsTrigger value="chat" className="flex-1 min-w-[140px] data-[state=active]:bg-background data-[state=active]:shadow-sm text-sm md:text-base py-3">
             <MessageCircle className="w-4 h-4 mr-2" />
-            Suporte Especialista
+            <span>Suporte Especialista</span>
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="iso">
           <IsoSelectionTab company={company} />
         </TabsContent>
-        
+
         <TabsContent value="generate">
           <GenerateDocumentsTab companyId={company.id} />
         </TabsContent>
-        
+
         <TabsContent value="documents">
           <ViewDocumentsTab companyId={company.id} />
         </TabsContent>
@@ -108,11 +123,10 @@ function IsoSelectionTab({ company }: { company: any }) {
   const { data: savedIsos, isLoading: isosLoading } = useCompanyIsos(company.id);
   const recommendMutation = useRecommendIso();
   const selectMutation = useSelectIso();
-  
+
   const [selectedIsos, setSelectedIsos] = useState<string[]>([]);
   const [hasLoadedSaved, setHasLoadedSaved] = useState(false);
 
-  // Sync saved isos to local state once loaded
   if (savedIsos && !hasLoadedSaved) {
     setSelectedIsos(savedIsos.map(iso => iso.isoCode));
     setHasLoadedSaved(true);
@@ -121,15 +135,12 @@ function IsoSelectionTab({ company }: { company: any }) {
   const handleRecommend = () => {
     recommendMutation.mutate(company.sector, {
       onSuccess: (data) => {
-        // Merge recommended with currently selected to avoid losing selections
         const newSet = new Set([...selectedIsos, ...data.recommended]);
         setSelectedIsos(Array.from(newSet));
         toast({
           title: "Recomendações da IA prontas",
-          description: `Normas sugeridas com base em '${company.sector}' foram selecionadas. Salvando e gerando documentos...`,
+          description: `Normas sugeridas com base em '${company.sector}' foram selecionadas.`,
         });
-        
-        // Auto-save and generate after recommendation
         handleSave();
       },
       onError: () => {
@@ -140,19 +151,17 @@ function IsoSelectionTab({ company }: { company: any }) {
 
   const handleSave = async () => {
     if (selectMutation.isPending) return;
-    
+
     selectMutation.mutate({ companyId: company.id, isos: selectedIsos }, {
       onSuccess: () => {
         toast({
           title: "Seleções Salvas",
           description: "As normas foram vinculadas e a documentação está sendo gerada pela IA.",
         });
-        // Invalidate queries to refresh UI
         queryClient.invalidateQueries({ queryKey: [buildUrl(api.iso.list.path, { id: company.id })] });
         queryClient.invalidateQueries({ queryKey: [buildUrl(api.documents.list.path, { id: company.id })] });
       },
       onError: (error: any) => {
-        console.error("Save Error Detail:", error);
         toast({ 
           variant: "destructive", 
           title: "Falha ao salvar seleções",
@@ -175,8 +184,10 @@ function IsoSelectionTab({ company }: { company: any }) {
       <div className="lg:col-span-2 space-y-6">
         <Card className="border-border/60 shadow-md">
           <CardHeader>
-            <CardTitle>Normas Alvo</CardTitle>
-            <CardDescription>Selecione as normas ISO que você deseja obter a certificação.</CardDescription>
+            <CardTitle><span>Normas Alvo</span></CardTitle>
+            <CardDescription>
+              <span>Selecione as normas ISO que você deseja obter a certificação.</span>
+            </CardDescription>
           </CardHeader>
           <CardContent className="grid sm:grid-cols-2 gap-4">
             {COMMON_ISOS.map((iso) => (
@@ -194,8 +205,8 @@ function IsoSelectionTab({ company }: { company: any }) {
                   className="mt-1"
                 />
                 <div className="space-y-1 leading-none">
-                  <p className="font-semibold text-foreground">{iso.code}</p>
-                  <p className="text-sm text-muted-foreground">{iso.name}</p>
+                  <p className="font-semibold text-foreground"><span>{iso.code}</span></p>
+                  <p className="text-sm text-muted-foreground"><span>{iso.name}</span></p>
                 </div>
               </div>
             ))}
@@ -206,7 +217,7 @@ function IsoSelectionTab({ company }: { company: any }) {
               disabled={selectMutation.isPending}
               className="hover-elevate px-8"
             >
-              {selectMutation.isPending ? "Salvando..." : "Salvar Seleções"}
+              <span>{selectMutation.isPending ? "Salvando..." : "Salvar Seleções"}</span>
             </Button>
           </CardFooter>
         </Card>
@@ -218,12 +229,14 @@ function IsoSelectionTab({ company }: { company: any }) {
             <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center mb-2 text-primary">
               <Sparkles className="w-5 h-5" />
             </div>
-            <CardTitle>Assistente de IA</CardTitle>
-            <CardDescription>Não tem certeza de quais normas se aplicam ao seu negócio?</CardDescription>
+            <CardTitle><span>Assistente de IA</span></CardTitle>
+            <CardDescription>
+              <span>Não tem certeza de quais normas se aplicam ao seu negócio?</span>
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground mb-6">
-              Nossa IA pode analisar seu setor ({company.sector}) e recomendar as normas ISO mais críticas para conformidade e excelência operacional.
+              <span>Nossa IA pode analisar seu setor ({company.sector}) e recomendar as normas ISO mais críticas.</span>
             </p>
             <Button 
               onClick={handleRecommend} 
@@ -232,9 +245,15 @@ function IsoSelectionTab({ company }: { company: any }) {
               className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
             >
               {recommendMutation.isPending ? (
-                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Analisando...</>
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  <span>Analisando...</span>
+                </>
               ) : (
-                <><Sparkles className="w-4 h-4 mr-2" /> Recomendar ISOs</>
+                <>
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  <span>Recomendar ISOs</span>
+                </>
               )}
             </Button>
           </CardContent>
@@ -263,12 +282,8 @@ function GenerateDocumentsTab({ companyId }: { companyId: number }) {
 
     setGerado(false);
     generateMutation.mutate(companyId, {
-      onSuccess: () => {
-        setGerado(true);
-      },
-      onError: () => {
-        setGerado(false);
-      }
+      onSuccess: () => setGerado(true),
+      onError: () => setGerado(false),
     });
   };
 
@@ -281,9 +296,14 @@ function GenerateDocumentsTab({ companyId }: { companyId: number }) {
           <div className="mb-6 inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
             <FileSignature className="w-8 h-8" />
           </div>
-          <h2 className="text-3xl font-bold font-display mb-4">Gerar Documentação Automaticamente</h2>
+          <h2 className="text-3xl font-bold font-display mb-4">
+            <span>Gerar Documentação Automaticamente</span>
+          </h2>
           <p className="text-muted-foreground text-lg mb-8 leading-relaxed">
-            Nosso motor de IA Gemini processará o perfil da sua empresa e as normas ISO selecionadas para gerar políticas, manuais e procedimentos personalizados necessários para a certificação.
+            <span>
+              Nosso motor de IA processará o perfil da sua empresa e as normas ISO selecionadas
+              para gerar políticas, manuais e procedimentos personalizados.
+            </span>
           </p>
 
           <Button 
@@ -293,31 +313,41 @@ function GenerateDocumentsTab({ companyId }: { companyId: number }) {
             className={`w-full sm:w-auto h-14 text-lg ${isGenerating ? 'bg-muted text-muted-foreground' : 'bg-primary hover:bg-primary/90 hover-elevate'}`}
           >
             {isGenerating ? (
-              <><Loader2 className="w-5 h-5 mr-3 animate-spin" /> Gerando Políticas...</>
+              <>
+                <Loader2 className="w-5 h-5 mr-3 animate-spin" />
+                <span>Gerando Políticas...</span>
+              </>
             ) : (
-              <><Sparkles className="w-5 h-5 mr-3" /> Gerar com IA</>
+              <>
+                <Sparkles className="w-5 h-5 mr-3" />
+                <span>Gerar com IA</span>
+              </>
             )}
           </Button>
 
           {(!savedIsos || savedIsos.length === 0) && (
             <Alert variant="destructive" className="mt-6">
               <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Ação Necessária</AlertTitle>
-              <AlertDescription>Selecione pelo menos uma norma ISO primeiro.</AlertDescription>
+              <AlertTitle><span>Ação Necessária</span></AlertTitle>
+              <AlertDescription>
+                <span>Selecione pelo menos uma norma ISO primeiro.</span>
+              </AlertDescription>
             </Alert>
           )}
 
           {gerado && (
             <Alert className="mt-6 border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-300">
               <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-              <AlertTitle className="text-emerald-800 dark:text-emerald-300">Documentação Gerada com Sucesso!</AlertTitle>
+              <AlertTitle className="text-emerald-800 dark:text-emerald-300">
+                <span>Documentação Gerada com Sucesso!</span>
+              </AlertTitle>
               <AlertDescription className="text-emerald-700 dark:text-emerald-400">
-                Acesse a aba <strong>Documentos</strong> para visualizar e baixar os arquivos em PDF.
+                <span>Acesse a aba <strong>Documentos</strong> para visualizar e baixar os arquivos em PDF.</span>
               </AlertDescription>
             </Alert>
           )}
         </div>
-        
+
         <div className="bg-muted/30 p-8 flex items-center justify-center border-l border-border/50 relative overflow-hidden">
           {isGenerating ? (
             <div className="text-center w-full max-w-sm">
@@ -326,8 +356,10 @@ function GenerateDocumentsTab({ companyId }: { companyId: number }) {
                 <div className="absolute inset-0 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
                 <Sparkles className="absolute inset-0 m-auto w-10 h-10 text-primary animate-pulse" />
               </div>
-              <h3 className="text-xl font-bold mb-2">A IA está trabalhando...</h3>
-              <p className="text-sm text-muted-foreground">Redigindo políticas de conformidade abrangentes adaptadas ao seu setor.</p>
+              <h3 className="text-xl font-bold mb-2"><span>A IA está trabalhando...</span></h3>
+              <p className="text-sm text-muted-foreground">
+                <span>Redigindo políticas de conformidade adaptadas ao seu setor.</span>
+              </p>
               <div className="mt-8 space-y-3 text-left">
                 <Skeleton className="h-4 w-full" />
                 <Skeleton className="h-4 w-5/6" />
@@ -339,15 +371,21 @@ function GenerateDocumentsTab({ companyId }: { companyId: number }) {
               <div className="w-24 h-24 mx-auto bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center mb-6">
                 <CheckCircle2 className="w-12 h-12 text-emerald-600" />
               </div>
-              <h3 className="text-xl font-bold mb-2 text-emerald-700 dark:text-emerald-400">Documentos Prontos!</h3>
-              <p className="text-sm text-muted-foreground">Seus documentos de conformidade ISO foram gerados com sucesso pela IA.</p>
+              <h3 className="text-xl font-bold mb-2 text-emerald-700 dark:text-emerald-400">
+                <span>Documentos Prontos!</span>
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                <span>Seus documentos de conformidade ISO foram gerados com sucesso.</span>
+              </p>
             </div>
           ) : (
             <div className="text-center">
               <div className="w-24 h-24 mx-auto bg-card rounded-2xl shadow-sm border border-border/50 flex items-center justify-center mb-6 transform -rotate-6">
                 <FileText className="w-10 h-10 text-muted-foreground/50" />
               </div>
-              <p className="text-muted-foreground font-medium">Pronto para compilar documentos</p>
+              <p className="text-muted-foreground font-medium">
+                <span>Pronto para compilar documentos</span>
+              </p>
             </div>
           )}
         </div>
@@ -377,27 +415,24 @@ function ViewDocumentsTab({ companyId }: { companyId: number }) {
     const pdf = new jsPDF();
     const margin = 15;
     const pageWidth = pdf.internal.pageSize.getWidth();
-    
-    // Header
+
     pdf.setFontSize(22);
     pdf.setTextColor(0, 51, 102);
     pdf.text("CERTIFICADO DE CONFORMIDADE", margin, 25);
-    
+
     pdf.setFontSize(16);
     pdf.text(doc.type, margin, 35);
-    
+
     pdf.setDrawColor(0, 51, 102);
     pdf.setLineWidth(0.5);
     pdf.line(margin, 40, pageWidth - margin, 40);
-    
-    // Content
+
     pdf.setFontSize(11);
     pdf.setTextColor(50, 50, 50);
-    
+
     const splitContent = pdf.splitTextToSize(doc.content, pageWidth - (margin * 2));
     pdf.text(splitContent, margin, 55);
-    
-    // Footer / Seal
+
     const pageCount = pdf.internal.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
       pdf.setPage(i);
@@ -405,14 +440,13 @@ function ViewDocumentsTab({ companyId }: { companyId: number }) {
       pdf.setTextColor(150, 150, 150);
       pdf.text(`ISO Genius AI Specialist - Documento Oficial de Certificação`, margin, pdf.internal.pageSize.getHeight() - 20);
       pdf.text(`Data de Emissão: ${new Date().toLocaleDateString()} | ID: ${doc.id}`, margin, pdf.internal.pageSize.getHeight() - 15);
-      
-      // Add a simple "Seal" effect
+
       pdf.setDrawColor(0, 102, 204);
       pdf.rect(pageWidth - 50, pdf.internal.pageSize.getHeight() - 40, 35, 25);
       pdf.setFontSize(8);
       pdf.text("IA VALIDATED", pageWidth - 47, pdf.internal.pageSize.getHeight() - 25);
     }
-    
+
     pdf.save(`${doc.type.replace(/\s+/g, '_')}_${companyId}.pdf`);
   };
 
@@ -428,10 +462,22 @@ function ViewDocumentsTab({ companyId }: { companyId: number }) {
     return (
       <div className="py-20 text-center border border-dashed border-border rounded-xl bg-muted/10">
         <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-50" />
-        <h3 className="text-xl font-semibold mb-2">Nenhum documento encontrado</h3>
-        <p className="text-muted-foreground mb-6">Inicie a geração automática clicando no botão abaixo.</p>
+        <h3 className="text-xl font-semibold mb-2"><span>Nenhum documento encontrado</span></h3>
+        <p className="text-muted-foreground mb-6">
+          <span>Inicie a geração automática clicando no botão abaixo.</span>
+        </p>
         <Button onClick={handleManualRegenerate} disabled={generateMutation.isPending}>
-          {generateMutation.isPending ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Gerando...</> : <><Sparkles className="w-4 h-4 mr-2" /> Gerar Documentação Agora</>}
+          {generateMutation.isPending ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              <span>Gerando...</span>
+            </>
+          ) : (
+            <>
+              <Sparkles className="w-4 h-4 mr-2" />
+              <span>Gerar Documentação Agora</span>
+            </>
+          )}
         </Button>
       </div>
     );
@@ -440,9 +486,16 @@ function ViewDocumentsTab({ companyId }: { companyId: number }) {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold">Documentos de Conformidade</h3>
+        <h3 className="text-lg font-semibold"><span>Documentos de Conformidade</span></h3>
         <Button variant="outline" size="sm" onClick={handleManualRegenerate} disabled={generateMutation.isPending}>
-          {generateMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Sparkles className="w-4 h-4 mr-2 text-primary" /> Atualizar Tudo</>}
+          {generateMutation.isPending ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <>
+              <Sparkles className="w-4 h-4 mr-2 text-primary" />
+              <span>Atualizar Tudo</span>
+            </>
+          )}
         </Button>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -453,7 +506,7 @@ function ViewDocumentsTab({ companyId }: { companyId: number }) {
               <CardHeader className="pb-3">
                 <div className="flex justify-between items-start">
                   <Badge variant="outline" className="mb-2 bg-primary/5 text-primary border-primary/20">
-                    {doc.type}
+                    <span>{doc.type}</span>
                   </Badge>
                   <Button 
                     size="icon" 
@@ -464,17 +517,25 @@ function ViewDocumentsTab({ companyId }: { companyId: number }) {
                     <Download className="w-4 h-4" />
                   </Button>
                 </div>
-                <CardTitle className="text-xl">Documento de Política</CardTitle>
+                <CardTitle className="text-base">
+                  <span>{doc.type}</span>
+                </CardTitle>
               </CardHeader>
               <CardContent className="flex-1">
-                <div className="text-sm text-muted-foreground bg-muted/40 p-4 rounded-lg border border-border/50 h-32 overflow-hidden relative">
-                  <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-muted/40 z-10 pointer-events-none"></div>
-                  <pre className="font-sans whitespace-pre-wrap">{doc.content}</pre>
-                </div>
+                <p className="text-sm text-muted-foreground line-clamp-4">
+                  <span>{doc.content?.slice(0, 200)}...</span>
+                </p>
               </CardContent>
-              <CardFooter className="pt-0 pb-4 px-6 flex justify-between items-center text-sm text-muted-foreground">
-                <span className="flex items-center"><CheckCircle2 className="w-4 h-4 mr-1 text-emerald-500" /> Pronto para Auditoria</span>
-                <Button variant="link" className="px-0" onClick={() => downloadPDF(doc)}>Baixar PDF</Button>
+              <CardFooter className="pt-3 border-t border-border/40">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  onClick={() => downloadPDF(doc)}
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  <span>Baixar PDF</span>
+                </Button>
               </CardFooter>
             </Card>
           </div>
@@ -486,105 +547,88 @@ function ViewDocumentsTab({ companyId }: { companyId: number }) {
 
 // --- TAB 4: CHAT SUPPORT ---
 function ChatSupportTab({ companyId }: { companyId: number }) {
+  const [message, setMessage] = useState("");
   const queryClient = useQueryClient();
-  const [input, setInput] = useState("");
+  const { toast } = useToast();
 
-  const { data: messages, isLoading } = useQuery<any[]>({
+  const { data: messages, isLoading } = useQuery({
     queryKey: [buildUrl(api.chat.list.path, { id: companyId })],
+    queryFn: () => apiRequest(buildUrl(api.chat.list.path, { id: companyId })),
   });
 
-  const chatMutation = useMutation({
-    mutationFn: async (content: string) => {
-      const res = await apiRequest("POST", buildUrl(api.chat.send.path, { id: companyId }), { content });
-      return res.json();
-    },
+  const sendMutation = useMutation({
+    mutationFn: (content: string) =>
+      apiRequest(buildUrl(api.chat.send.path, { id: companyId }), {
+        method: "POST",
+        body: JSON.stringify({ content }),
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [buildUrl(api.chat.list.path, { id: companyId })] });
-      setInput("");
-    }
+      setMessage("");
+    },
+    onError: () => {
+      toast({ variant: "destructive", title: "Falha ao enviar mensagem" });
+    },
   });
 
   const handleSend = () => {
-    if (!input.trim() || chatMutation.isPending) return;
-    chatMutation.mutate(input);
+    if (!message.trim() || sendMutation.isPending) return;
+    sendMutation.mutate(message.trim());
   };
 
   return (
-    <Card className="border-border/60 shadow-lg flex flex-col h-[600px]">
-      <CardHeader className="border-b bg-muted/30">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-            <Sparkles className="w-5 h-5" />
-          </div>
-          <div>
-            <CardTitle className="text-lg">Suporte Especialista ISO</CardTitle>
-            <CardDescription>Tire suas dúvidas técnicas diariamente com nossa IA especializada.</CardDescription>
-          </div>
-        </div>
+    <Card className="border-border/60 shadow-md">
+      <CardHeader>
+        <CardTitle><span>Suporte Especialista ISO</span></CardTitle>
+        <CardDescription>
+          <span>Tire suas dúvidas sobre certificação com nosso consultor de IA.</span>
+        </CardDescription>
       </CardHeader>
-      
-      <div className="flex-1 overflow-y-auto p-6 min-h-0">
-        <div className="space-y-4">
-          {isLoading ? (
-            <div className="flex flex-col gap-4">
-              <Skeleton className="h-12 w-2/3 rounded-2xl" />
-              <Skeleton className="h-12 w-2/3 self-end rounded-2xl" />
-            </div>
-          ) : messages?.length === 0 ? (
-            <div className="text-center py-10">
-              <MessageCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-20" />
-              <p className="text-muted-foreground">Olá! Sou seu especialista ISO. Como posso ajudar com sua certificação hoje?</p>
-            </div>
-          ) : (
-            messages?.map((msg) => (
-              <div
-                key={msg.id}
-                className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
-              >
-                <div
-                  className={`max-w-[80%] p-4 rounded-2xl ${
-                    msg.role === 'user'
-                      ? 'bg-primary text-primary-foreground rounded-tr-none'
-                      : 'bg-muted text-foreground rounded-tl-none border border-border/50'
-                  }`}
-                >
-                  <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
-                </div>
-                <span className="text-[10px] text-muted-foreground mt-1 px-1">
-                  {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </span>
-              </div>
-            ))
+      <CardContent>
+        <div className="h-96 overflow-y-auto space-y-4 mb-4 p-4 bg-muted/20 rounded-lg">
+          {isLoading && <Skeleton className="h-12 w-full" />}
+          {(!messages || messages.length === 0) && !isLoading && (
+            <p className="text-center text-muted-foreground text-sm py-8">
+              <span>Faça uma pergunta sobre certificação ISO para começar.</span>
+            </p>
           )}
-          {chatMutation.isPending && (
-            <div className="flex items-start">
-              <div className="bg-muted p-4 rounded-2xl rounded-tl-none border border-border/50">
-                <Loader2 className="w-4 h-4 animate-spin text-primary" />
+          {messages?.map((msg: any) => (
+            <div
+              key={msg.id}
+              className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+            >
+              <div
+                className={`max-w-[80%] p-3 rounded-xl text-sm ${
+                  msg.role === "user"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-card border border-border/60"
+                }`}
+              >
+                <span>{msg.content}</span>
+              </div>
+            </div>
+          ))}
+          {sendMutation.isPending && (
+            <div className="flex justify-start">
+              <div className="bg-card border border-border/60 p-3 rounded-xl">
+                <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
               </div>
             </div>
           )}
         </div>
-      </div>
-
-      <CardFooter className="p-4 border-t bg-muted/10">
-        <div className="flex w-full gap-2">
-          <Input 
-            placeholder="Digite sua dúvida técnica..." 
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-            disabled={chatMutation.isPending}
-            className="flex-1 h-12"
+        <div className="flex gap-2">
+          <Input
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            placeholder="Digite sua dúvida sobre ISO..."
+            onKeyDown={(e) => e.key === "Enter" && handleSend()}
+            disabled={sendMutation.isPending}
           />
-          <Button 
-            onClick={handleSend} 
-            disabled={chatMutation.isPending || !input.trim()}
-            className="h-12 px-6"
-          >
-            {chatMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+          <Button onClick={handleSend} disabled={sendMutation.isPending || !message.trim()}>
+            <Send className="w-4 h-4" />
           </Button>
         </div>
-      </CardFooter>
+      </CardContent>
     </Card>
   );
 }

@@ -5,40 +5,33 @@ import { api } from "@shared/routes";
 import { z } from "zod";
 import crypto from "crypto";
 
-// Call Gemini via Replit AI Integrations using direct fetch
+// Chama OpenRouter com a chave definida em Secrets como "api_key"
 async function callGemini(prompt: string): Promise<string> {
-  const baseUrl = process.env.AI_INTEGRATIONS_GEMINI_BASE_URL || "https://generativelanguage.googleapis.com";
-  const apiKey = process.env.AI_INTEGRATIONS_GEMINI_API_KEY || "";
-  // Try models in order until one works
-  const models = ["gemini-pro", "gemini-1.5-flash", "gemini-1.5-pro"];
-  for (const model of models) {
-    try {
-      const url = `${baseUrl}/v1beta/models/${model}:generateContent?key=${apiKey}`;
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-        }),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        const code = (err as any)?.error?.code;
-        if (code === "UNSUPPORTED_MODEL" || code === "MODEL_NOT_FOUND" || res.status === 400) {
-          continue; // try next model
-        }
-        throw new Error(`Gemini API error ${res.status}`);
-      }
-      const data = await res.json() as any;
-      return data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
-    } catch (e: any) {
-      if (e.message?.includes("UNSUPPORTED_MODEL") || e.message?.includes("MODEL_NOT_FOUND")) {
-        continue;
-      }
-      throw e;
-    }
+  const apiKey = process.env.api_key || "";
+
+  if (!apiKey) {
+    throw new Error("Secret 'api_key' não encontrado. Configure em Secrets.");
   }
-  throw new Error("Nenhum modelo Gemini disponível");
+
+  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: "mistralai/mistral-7b-instruct",
+      messages: [{ role: "user", content: prompt }],
+    }),
+  });
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(`OpenRouter error ${response.status}: ${JSON.stringify(err)}`);
+  }
+
+  const data = await response.json() as any;
+  return data.choices?.[0]?.message?.content || "";
 }
 
 function recommendIsos(sector: string): string[] {
@@ -68,7 +61,6 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const hashedPassword = crypto.createHash("sha256").update(password + email).digest("hex");
       const user = await storage.createUser({ email, password: hashedPassword });
       
-      // Gerar token simples (em produção usar JWT)
       const token = Buffer.from(`${user.id}:${Date.now()}`).toString("base64");
       res.json({ token, userId: user.id, email: user.email });
     } catch (err) {
@@ -106,7 +98,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.post(api.companies.create.path, async (req, res) => {
     try {
       const input = api.companies.create.input.parse(req.body);
-      const userId = req.body.userId || 1; // Pega do body ou usa 1 como padrão
+      const userId = req.body.userId || 1;
       const company = await storage.createCompany({ ...input, userId });
       res.status(201).json(company);
     } catch (err) {
@@ -148,10 +140,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const input = api.iso.select.input.parse(req.body);
       const selections = await storage.saveIsoSelections(companyId, input.isos);
       
-      // Return immediately to avoid blocking the client
       res.status(201).json(selections);
       
-      // Trigger background document generation
+      // Geração em background
       (async () => {
         try {
           const company = await storage.getCompany(companyId);
@@ -225,7 +216,6 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
     let generatedDocs = fallbackDocs;
 
-    // Tentar geração com IA (sem falhar a requisição se a IA não funcionar)
     try {
       const prompt = `Você é um auditor sênior de certificação ISO. Gere 3 documentos formais para:
 Nome: ${company.name}, Setor: ${company.sector}, Tamanho: ${company.size}, Normas: ${isoList.join(', ')}.
@@ -284,7 +274,6 @@ Retorne APENAS um array JSON válido (sem markdown):
       const isoList = selections.map(s => s.isoCode);
       const docs = await storage.getDocuments(companyId);
 
-      // Save user message
       const userMsg = await storage.saveChatMessage({ companyId, role: "user", content });
 
       const prompt = `Você é um Consultor Especialista Sênior em Certificação ISO e Gestão de Qualidade. Sua missão é fornecer suporte diário e técnico para a empresa ${company.name} (${company.sector}).
