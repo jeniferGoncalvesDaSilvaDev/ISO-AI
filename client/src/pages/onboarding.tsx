@@ -18,13 +18,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 const formSchema = api.companies.create.input;
@@ -111,20 +104,19 @@ export default function Onboarding() {
                       <Users className="w-4 h-4 text-primary" />
                       Tamanho da Empresa
                     </FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger className="h-11">
-                          <SelectValue placeholder="Selecione o tamanho" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent position="popper">
-                        <SelectItem value="1-10">Micro (1-10 funcionários)</SelectItem>
-                        <SelectItem value="11-50">Pequena (11-50 funcionários)</SelectItem>
-                        <SelectItem value="51-200">Média (51-200 funcionários)</SelectItem>
-                        <SelectItem value="201-1000">Grande (201-1000 funcionários)</SelectItem>
-                        <SelectItem value="1000+">Corporação (1000+ funcionários)</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <FormControl>
+                      <select
+                        {...field}
+                        className="h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                      >
+                        <option value="" disabled>Selecione o tamanho</option>
+                        <option value="1-10">Micro (1-10 funcionários)</option>
+                        <option value="11-50">Pequena (11-50 funcionários)</option>
+                        <option value="51-200">Média (51-200 funcionários)</option>
+                        <option value="201-1000">Grande (201-1000 funcionários)</option>
+                        <option value="1000+">Corporação (1000+ funcionários)</option>
+                      </select>
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
