@@ -292,7 +292,10 @@ Retorne APENAS um array JSON válido (sem markdown):
     const companyId = Number(req.params.id);
     const { content } = req.body;
 
+    console.log("=== CHAT SEND ===", { companyId, content, body: req.body });
+
     if (!content?.trim()) {
+      console.log("Mensagem vazia");
       return res.status(400).json({ message: "Mensagem não pode estar vazia" });
     }
 
