@@ -117,7 +117,7 @@ export default function Onboarding() {
                           <SelectValue placeholder="Selecione o tamanho" />
                         </SelectTrigger>
                       </FormControl>
-                      <SelectContent>
+                      <SelectContent position="popper">
                         <SelectItem value="1-10">Micro (1-10 funcionários)</SelectItem>
                         <SelectItem value="11-50">Pequena (11-50 funcionários)</SelectItem>
                         <SelectItem value="51-200">Média (51-200 funcionários)</SelectItem>
