@@ -143,11 +143,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           ]`;
 
           const response = await ai.models.generateContent({
-            model: "gemini-2.0-flash",
+            model: "gemini-1.5-flash",
             contents: [{ role: "user", parts: [{ text: prompt }] }],
           });
 
-          const text = response.text || "";
+          const text = (typeof response.text === "function" ? (response.text as any)() : response.text) || "";
           const jsonStart = text.indexOf('[');
           const jsonEnd = text.lastIndexOf(']') + 1;
           
@@ -178,80 +178,68 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.post(api.documents.generate.path, async (req, res) => {
     const companyId = Number(req.params.id);
     const company = await storage.getCompany(companyId);
-    if (!company) {
-      return res.status(404).json({ message: "Company not found" });
-    }
+    if (!company) return res.status(404).json({ message: "Empresa não encontrada" });
 
     const selections = await storage.getIsoSelections(companyId);
     const isoList = selections.map(s => s.isoCode);
-    
     if (isoList.length === 0) {
       return res.status(400).json({ message: "Selecione as ISOs primeiro antes de gerar os documentos" });
     }
 
+    const data = new Date().toLocaleDateString("pt-BR");
+    const fallbackDocs = [
+      {
+        type: "Manual da Qualidade",
+        content: `MANUAL DA QUALIDADE — ${company.name}\nEmitido em: ${data}\nNormas: ${isoList.join(', ')}\n\n1. APRESENTAÇÃO DA EMPRESA\n${company.name} é uma organização do setor de ${company.sector} comprometida com a excelência operacional e a melhoria contínua de seus processos.\n\n2. ESCOPO DO SISTEMA DE GESTÃO\nEste Manual abrange todos os processos, produtos e serviços da ${company.name}, alinhados às exigências das normas ${isoList.join(', ')}.\n\n3. POLÍTICA DA QUALIDADE\nA liderança da ${company.name} se compromete com a satisfação total dos clientes, a conformidade regulatória e a melhoria contínua de todos os processos internos.\n\n4. RESPONSABILIDADES\n- Alta Direção: Garantir recursos e liderança para o SGQ\n- Gestores: Implementar e monitorar os processos em suas áreas\n- Colaboradores: Cumprir os procedimentos e reportar não conformidades\n\n5. CONTROLE DE DOCUMENTOS\nTodos os documentos do SGQ são controlados, revisados periodicamente e aprovados pela Alta Direção antes de sua divulgação.`
+      },
+      {
+        type: "Política da Empresa",
+        content: `POLÍTICA INTEGRADA — ${company.name}\nEmitida em: ${data}\n\nA ${company.name}, empresa atuante no setor de ${company.sector} com ${company.size} colaboradores, declara seu compromisso formal com os seguintes princípios:\n\n✅ QUALIDADE: Entregar produtos/serviços que superem as expectativas dos clientes, em conformidade com a ${isoList.includes('ISO 9001') ? 'ISO 9001' : isoList[0]}.\n\n✅ SEGURANÇA DA INFORMAÇÃO: ${isoList.includes('ISO 27001') ? 'Proteger os ativos de informação contra acessos não autorizados, em conformidade com a ISO 27001.' : 'Garantir a confidencialidade e integridade das informações corporativas.'}\n\n✅ RESPONSABILIDADE: Agir com ética, transparência e respeito a todas as partes interessadas.\n\n✅ MELHORIA CONTÍNUA: Revisar e aprimorar continuamente todos os processos e sistemas de gestão.\n\nEsta política é comunicada a todos os colaboradores, revisada anualmente e disponível publicamente.\n\nAssinado pela Alta Direção — ${data}`
+      },
+      {
+        type: "Plano de Ação",
+        content: `PLANO DE AÇÃO ESTRATÉGICO — ${company.name}\nElaborado em: ${data}\nNormas-alvo: ${isoList.join(', ')}\n\nFASE 1 — DIAGNÓSTICO (Mês 1-2)\n□ Realizar análise de lacunas (gap analysis) com base nos requisitos das normas ${isoList.join(', ')}\n□ Mapear todos os processos críticos da organização\n□ Identificar partes interessadas e suas expectativas\n□ Designar Representante da Direção para o SGQ\n\nFASE 2 — PLANEJAMENTO (Mês 2-3)\n□ Definir objetivos mensuráveis da qualidade por área\n□ Elaborar ou atualizar todos os procedimentos operacionais\n□ Criar matriz de riscos e oportunidades\n□ Planejar calendário de treinamentos\n\nFASE 3 — IMPLEMENTAÇÃO (Mês 3-5)\n□ Treinar 100% dos colaboradores nos novos procedimentos\n□ Implementar controles de documentos e registros\n□ Executar o plano de comunicação interna\n□ Iniciar monitoramento de indicadores de desempenho\n\nFASE 4 — VERIFICAÇÃO E AUDITORIA (Mês 5-6)\n□ Realizar Auditoria Interna completa\n□ Conduzir Revisão pela Direção\n□ Corrigir não conformidades identificadas\n□ Solicitar Auditoria de Certificação com organismo acreditado\n\nINDICADORES DE SUCESSO:\n- Taxa de conformidade com requisitos normativos > 95%\n- Zero não conformidades críticas na auditoria externa\n- Satisfação do cliente > 90%`
+      }
+    ];
+
+    let generatedDocs = fallbackDocs;
+
+    // Tentar geração com IA (sem falhar a requisição se a IA não funcionar)
     try {
-      const prompt = `Atue como um Especialista Sênior e Auditor de Certificação ISO. Sua missão é fornecer consultoria de alto nível para empresas que buscam conformidade total.
-      
-      Gere 3 documentos formais e robustos de certificação ISO para a seguinte empresa:
-      Nome: ${company.name}
-      Setor: ${company.sector}
-      Tamanho: ${company.size}
-      Normas aplicáveis: ${isoList.join(', ')}. 
-      
-      IMPORTANTE: Se a empresa cresceu ou mudou de porte, adapte o conteúdo para a nova realidade operacional. Os documentos devem ser técnicos, precisos e prontos para auditoria.
-      
-      Os documentos devem ser:
-      1. Manual da Qualidade (ou Sistema de Gestão Integrado)
-      2. Política da Empresa (Compromisso com as normas selecionadas)
-      3. Plano de Ação Estratégico (Passos para implementação e manutenção)
-      
-      Escreva o conteúdo de forma profissional em Português Brasileiro.
-      Retorne APENAS um JSON válido neste exato formato de array de objetos, sem formatação markdown extra ao redor:
-      [
-        { "type": "Manual da Qualidade", "content": "conteúdo técnico e extenso aqui..." },
-        { "type": "Política da Empresa", "content": "conteúdo técnico e extenso aqui..." },
-        { "type": "Plano de Ação", "content": "conteúdo técnico e extenso aqui..." }
-      ]`;
+      const prompt = `Você é um auditor sênior de certificação ISO. Gere 3 documentos formais para:
+Nome: ${company.name}, Setor: ${company.sector}, Tamanho: ${company.size}, Normas: ${isoList.join(', ')}.
+Retorne APENAS um array JSON válido (sem markdown):
+[{"type":"Manual da Qualidade","content":"..."},{"type":"Política da Empresa","content":"..."},{"type":"Plano de Ação","content":"..."}]`;
 
       const response = await ai.models.generateContent({
-        model: "gemini-2.0-flash",
+        model: "gemini-1.5-flash",
         contents: [{ role: "user", parts: [{ text: prompt }] }],
       });
 
-      const text = (typeof response.text === "function" ? response.text() : response.text) || "";
-      let generatedDocs = [];
-      
-      // Parse the JSON array out of the response (handles markdown blocks if returned)
+      const text = (typeof response.text === "function" ? (response.text as any)() : response.text) || "";
       const jsonStart = text.indexOf('[');
       const jsonEnd = text.lastIndexOf(']') + 1;
-      
-      if (jsonStart !== -1 && jsonEnd !== -1) {
-        try {
-           generatedDocs = JSON.parse(text.slice(jsonStart, jsonEnd));
-        } catch(e) {
-           console.error("Failed to parse JSON from AI", e);
+
+      if (jsonStart !== -1 && jsonEnd > jsonStart) {
+        const parsed = JSON.parse(text.slice(jsonStart, jsonEnd));
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          generatedDocs = parsed;
         }
       }
+    } catch (aiErr) {
+      console.warn("IA indisponível, usando documentos padrão:", (aiErr as Error).message);
+    }
 
-      if (generatedDocs.length === 0) {
-        generatedDocs = [
-          { type: "Manual da Qualidade", content: `Sistema de gestão profissional criado por Especialista ISO para ${company.name}.\nData: ${new Date().toLocaleDateString()}` },
-          { type: "Política da Empresa", content: `A empresa ${company.name} estabelece sua política de excelência baseada nas normas ${isoList.join(', ')}.` },
-          { type: "Plano de Ação", content: `Roteiro estratégico para conformidade das normas: ${isoList.join(', ')}.` }
-        ];
-      }
-
-      // We allow regenerating documents, so we don't necessarily delete old ones but we mark them with createdAt
+    try {
       const savedDocs = [];
       for (const d of generatedDocs) {
         const saved = await storage.saveDocument({ companyId: company.id, type: d.type, content: d.content });
         savedDocs.push(saved);
       }
-
       res.status(201).json(savedDocs);
-    } catch (err) {
-      console.error("AI Generation Error:", err);
-      res.status(500).json({ message: "Falha ao gerar documentos com a IA" });
+    } catch (dbErr) {
+      console.error("Erro ao salvar documentos:", dbErr);
+      res.status(500).json({ message: "Erro ao salvar os documentos no banco de dados" });
     }
   });
 
@@ -301,11 +289,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       Responda de forma profissional, acolhedora e altamente técnica. Se o cliente perguntar algo sobre os documentos acima, use o conteúdo deles para responder.`;
 
       const response = await ai.models.generateContent({
-        model: "gemini-2.0-flash",
+        model: "gemini-1.5-flash",
         contents: [{ role: "user", parts: [{ text: prompt }] }],
       });
 
-      const aiContent = (typeof response.text === "function" ? response.text() : response.text) || "Desculpe, tive um problema ao processar sua solicitação.";
+      const aiContent = (typeof response.text === "function" ? (response.text as any)() : response.text) || "Desculpe, tive um problema ao processar sua solicitação.";
       const assistantMsg = await storage.saveChatMessage({ companyId, role: "assistant", content: aiContent });
 
       res.status(201).json(assistantMsg);
