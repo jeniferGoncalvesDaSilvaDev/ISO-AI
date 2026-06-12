@@ -20,7 +20,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-const formSchema = api.companies.create.input;
+const formSchema = z.object({
+  name: z.string().min(1, "Nome é obrigatório"),
+  sector: z.string().min(1, "Setor é obrigatório"),
+  size: z.string().min(1, "Tamanho é obrigatório"),
+});
 type FormValues = z.infer<typeof formSchema>;
 
 export default function Onboarding() {
