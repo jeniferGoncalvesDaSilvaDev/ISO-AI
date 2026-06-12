@@ -143,7 +143,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           ]`;
 
           const response = await ai.models.generateContent({
-            model: "gemini-3.1-pro-preview",
+            model: "gemini-2.0-flash",
             contents: [{ role: "user", parts: [{ text: prompt }] }],
           });
 
@@ -214,11 +214,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       ]`;
 
       const response = await ai.models.generateContent({
-        model: "gemini-3.1-pro-preview",
+        model: "gemini-2.0-flash",
         contents: [{ role: "user", parts: [{ text: prompt }] }],
       });
 
-      const text = response.text || "";
+      const text = (typeof response.text === "function" ? response.text() : response.text) || "";
       let generatedDocs = [];
       
       // Parse the JSON array out of the response (handles markdown blocks if returned)
@@ -301,11 +301,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       Responda de forma profissional, acolhedora e altamente técnica. Se o cliente perguntar algo sobre os documentos acima, use o conteúdo deles para responder.`;
 
       const response = await ai.models.generateContent({
-        model: "gemini-3.1-pro-preview",
+        model: "gemini-2.0-flash",
         contents: [{ role: "user", parts: [{ text: prompt }] }],
       });
 
-      const aiContent = response.text || "Desculpe, tive um problema ao processar sua solicitação.";
+      const aiContent = (typeof response.text === "function" ? response.text() : response.text) || "Desculpe, tive um problema ao processar sua solicitação.";
       const assistantMsg = await storage.saveChatMessage({ companyId, role: "assistant", content: aiContent });
 
       res.status(201).json(assistantMsg);
