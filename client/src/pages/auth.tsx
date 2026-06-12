@@ -34,11 +34,10 @@ export default function AuthPage() {
         return;
       }
 
-      // Salvar token e userId no localStorage
       localStorage.setItem("token", data.token);
       localStorage.setItem("userId", String(data.userId));
+      localStorage.setItem("userEmail", data.email);
 
-      // Redirecionar para dashboard
       setLocation("/dashboard");
     } catch (err) {
       setError("Erro de conexão com o servidor");

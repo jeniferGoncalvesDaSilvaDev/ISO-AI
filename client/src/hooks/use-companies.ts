@@ -4,11 +4,18 @@ import { z } from "zod";
 
 type InsertCompany = z.infer<typeof api.companies.create.input>;
 
+function getUserId(): number | null {
+  const id = localStorage.getItem("userId");
+  return id ? Number(id) : null;
+}
+
 export function useCompanies() {
+  const userId = getUserId();
   return useQuery({
-    queryKey: [api.companies.list.path],
+    queryKey: [api.companies.list.path, userId],
     queryFn: async () => {
-      const res = await fetch(api.companies.list.path, { credentials: "include" });
+      const url = userId ? `${api.companies.list.path}?userId=${userId}` : api.companies.list.path;
+      const res = await fetch(url, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch companies");
       return api.companies.list.responses[200].parse(await res.json());
     },
@@ -34,10 +41,11 @@ export function useCreateCompany() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (data: InsertCompany) => {
+      const userId = getUserId();
       const res = await fetch(api.companies.create.path, {
         method: api.companies.create.method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify({ ...data, userId }),
         credentials: "include",
       });
       
@@ -50,6 +58,9 @@ export function useCreateCompany() {
       }
       return api.companies.create.responses[201].parse(await res.json());
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: [api.companies.list.path] }),
+    onSuccess: () => {
+      const userId = getUserId();
+      queryClient.invalidateQueries({ queryKey: [api.companies.list.path, userId] });
+    },
   });
 }

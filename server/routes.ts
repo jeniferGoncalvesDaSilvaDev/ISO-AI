@@ -24,23 +24,6 @@ function recommendIsos(sector: string): string[] {
   return ["ISO 9001"];
 }
 
-async function seedDatabase() {
-  const existing = await storage.getCompanies();
-  if (existing.length === 0) {
-    const c1 = await storage.createCompany({ name: "TechNova Solutions", sector: "Software Development", size: "10-50" });
-    await storage.saveIsoSelections(c1.id, ["ISO 9001", "ISO 27001"]);
-    await storage.saveDocument({ 
-      companyId: c1.id, 
-      type: "Manual da Qualidade", 
-      content: "A TechNova Solutions se compromete com a excelência na entrega de softwares seguros e de alta qualidade. Nosso sistema de gestão assegura a melhoria contínua de nossos processos e a satisfação de nossos clientes." 
-    });
-    await storage.saveDocument({
-      companyId: c1.id,
-      type: "Plano de Ação",
-      content: "- Mapeamento dos processos internos\n- Treinamento da equipe em segurança da informação\n- Auditoria interna programada"
-    });
-  }
-}
 
 export async function registerRoutes(httpServer: Server, app: Express): Promise<Server> {
   // REGISTER - POST /api/auth/register
@@ -331,8 +314,6 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       res.status(500).json({ message: "Erro no suporte via IA" });
     }
   });
-
-  seedDatabase().catch(console.error);
 
   return httpServer;
 }
