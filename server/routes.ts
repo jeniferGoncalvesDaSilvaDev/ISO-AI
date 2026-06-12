@@ -6,6 +6,7 @@ import { z } from "zod";
 import crypto from "crypto";
 
 // Chama OpenRouter com a chave definida em Secrets como "api_key"
+// Tenta modelos em sequência até um funcionar
 async function callGemini(prompt: string): Promise<string> {
   const apiKey = process.env.api_key || "";
 
@@ -13,25 +14,45 @@ async function callGemini(prompt: string): Promise<string> {
     throw new Error("Secret 'api_key' não encontrado. Configure em Secrets.");
   }
 
-  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: "mistralai/mistral-7b-instruct",
-      messages: [{ role: "user", content: prompt }],
-    }),
-  });
+  const models = [
+    "mistralai/mistral-7b-instruct",
+    "meta-llama/llama-3-8b-instruct:free",
+  ];
 
-  if (!response.ok) {
-    const err = await response.json().catch(() => ({}));
-    throw new Error(`OpenRouter error ${response.status}: ${JSON.stringify(err)}`);
+  for (const model of models) {
+    try {
+      console.log(`Tentando modelo: ${model}`);
+      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model,
+          messages: [{ role: "user", content: prompt }],
+        }),
+      });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        console.warn(`Modelo ${model} falhou:`, JSON.stringify(err));
+        continue; // tenta o próximo
+      }
+
+      const data = await response.json() as any;
+      const content = data.choices?.[0]?.message?.content || "";
+      if (content) {
+        console.log(`Modelo ${model} funcionou!`);
+        return content;
+      }
+    } catch (e: any) {
+      console.warn(`Erro no modelo ${model}:`, e.message);
+      continue;
+    }
   }
 
-  const data = await response.json() as any;
-  return data.choices?.[0]?.message?.content || "";
+  throw new Error("Nenhum modelo disponível no OpenRouter.");
 }
 
 function recommendIsos(sector: string): string[] {
@@ -52,15 +73,15 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!email || !password) {
         return res.status(400).json({ message: "Email e senha são obrigatórios" });
       }
-      
+
       const existingUser = await storage.getUserByEmail(email);
       if (existingUser) {
         return res.status(400).json({ message: "Este email já está registrado" });
       }
-      
+
       const hashedPassword = crypto.createHash("sha256").update(password + email).digest("hex");
       const user = await storage.createUser({ email, password: hashedPassword });
-      
+
       const token = Buffer.from(`${user.id}:${Date.now()}`).toString("base64");
       res.json({ token, userId: user.id, email: user.email });
     } catch (err) {
@@ -76,17 +97,17 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!email || !password) {
         return res.status(400).json({ message: "Email e senha são obrigatórios" });
       }
-      
+
       const user = await storage.getUserByEmail(email);
       if (!user) {
         return res.status(401).json({ message: "Email ou senha inválidos" });
       }
-      
+
       const hashedPassword = crypto.createHash("sha256").update(password + email).digest("hex");
       if (hashedPassword !== user.password) {
         return res.status(401).json({ message: "Email ou senha inválidos" });
       }
-      
+
       const token = Buffer.from(`${user.id}:${Date.now()}`).toString("base64");
       res.json({ token, userId: user.id, email: user.email });
     } catch (err) {
@@ -139,9 +160,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const companyId = Number(req.params.id);
       const input = api.iso.select.input.parse(req.body);
       const selections = await storage.saveIsoSelections(companyId, input.isos);
-      
+
       res.status(201).json(selections);
-      
+
       // Geração em background
       (async () => {
         try {
@@ -151,7 +172,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           const prompt = `Atue como um Especialista Sênior e Auditor de Certificação ISO. 
           Gere 3 documentos formais para a empresa ${company.name} (${company.sector}), tamanho ${company.size}.
           Normas: ${input.isos.join(', ')}.
-          
+
           Retorne APENAS um JSON válido de array de objetos:
           [
             { "type": "Manual da Qualidade", "content": "..." },
@@ -162,7 +183,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           const text = await callGemini(prompt);
           const jsonStart = text.indexOf('[');
           const jsonEnd = text.lastIndexOf(']') + 1;
-          
+
           if (jsonStart !== -1 && jsonEnd !== -1) {
             const generatedDocs = JSON.parse(text.slice(jsonStart, jsonEnd));
             for (const d of generatedDocs) {
@@ -257,40 +278,50 @@ Retorne APENAS um array JSON válido (sem markdown):
 
   app.get(api.chat.list.path, async (req, res) => {
     const companyId = Number(req.params.id);
-    const messages = await storage.getChatMessages(companyId);
-    res.json(messages);
+    try {
+      const msgs = await storage.getChatMessages(companyId);
+      res.json(msgs);
+    } catch (err) {
+      console.error("Chat list error:", err);
+      res.json([]);
+    }
   });
 
   app.post(api.chat.send.path, async (req, res) => {
     const companyId = Number(req.params.id);
     const { content } = req.body;
-    
+
+    if (!content?.trim()) {
+      return res.status(400).json({ message: "Mensagem não pode estar vazia" });
+    }
+
     try {
       const company = await storage.getCompany(companyId);
       if (!company) return res.status(404).json({ message: "Empresa não encontrada" });
 
       const history = await storage.getChatMessages(companyId);
       const selections = await storage.getIsoSelections(companyId);
-      const isoList = selections.map(s => s.isoCode);
+      const isoList = selections.map((s: any) => s.isoCode);
       const docs = await storage.getDocuments(companyId);
 
-      const userMsg = await storage.saveChatMessage({ companyId, role: "user", content });
+      // Salva mensagem do usuário
+      await storage.saveChatMessage({ companyId, role: "user", content });
 
       const prompt = `Você é um Consultor Especialista Sênior em Certificação ISO e Gestão de Qualidade. Sua missão é fornecer suporte diário e técnico para a empresa ${company.name} (${company.sector}).
-      
+
       Contexto atual da empresa:
       - Setor: ${company.sector}
       - Tamanho: ${company.size}
       - Normas de interesse: ${isoList.join(', ') || 'Nenhuma selecionada ainda'}
-      
+
       Documentos Já Gerados pela IA para Consulta:
-      ${docs.map(d => `--- ${d.type} ---\n${d.content}`).join('\n\n')}
-      
+      ${docs.map((d: any) => `--- ${d.type} ---\n${d.content}`).join('\n\n')}
+
       Histórico de conversa:
-      ${history.map(m => `${m.role === 'user' ? 'Cliente' : 'Especialista'}: ${m.content}`).join('\n')}
-      
+      ${history.map((m: any) => `${m.role === 'user' ? 'Cliente' : 'Especialista'}: ${m.content}`).join('\n')}
+
       Cliente pergunta: ${content}
-      
+
       Responda de forma profissional, acolhedora e altamente técnica. Se o cliente perguntar algo sobre os documentos acima, use o conteúdo deles para responder.`;
 
       const aiContent = await callGemini(prompt).catch(() => "Desculpe, tive um problema ao processar sua solicitação. Tente novamente.");
