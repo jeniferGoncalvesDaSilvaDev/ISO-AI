@@ -22,7 +22,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
 
 const COMMON_ISOS = [
   { code: "ISO 9001", name: "Gestão da Qualidade" },
@@ -266,13 +265,9 @@ function GenerateDocumentsTab({ companyId }: { companyId: number }) {
     generateMutation.mutate(companyId, {
       onSuccess: () => {
         setGerado(true);
-        toast({
-          title: "✅ Documentação Gerada!",
-          description: "Acesse a aba Documentos para visualizar e baixar.",
-        });
       },
-      onError: (err) => {
-        toast({ variant: "destructive", title: "Falha na geração", description: err.message });
+      onError: () => {
+        setGerado(false);
       }
     });
   };
@@ -528,7 +523,7 @@ function ChatSupportTab({ companyId }: { companyId: number }) {
         </div>
       </CardHeader>
       
-      <ScrollArea className="flex-1 p-6">
+      <div className="flex-1 overflow-y-auto p-6 min-h-0">
         <div className="space-y-4">
           {isLoading ? (
             <div className="flex flex-col gap-4">
@@ -542,14 +537,14 @@ function ChatSupportTab({ companyId }: { companyId: number }) {
             </div>
           ) : (
             messages?.map((msg) => (
-              <div 
-                key={msg.id} 
+              <div
+                key={msg.id}
                 className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
               >
-                <div 
+                <div
                   className={`max-w-[80%] p-4 rounded-2xl ${
-                    msg.role === 'user' 
-                      ? 'bg-primary text-primary-foreground rounded-tr-none' 
+                    msg.role === 'user'
+                      ? 'bg-primary text-primary-foreground rounded-tr-none'
                       : 'bg-muted text-foreground rounded-tl-none border border-border/50'
                   }`}
                 >
@@ -564,12 +559,12 @@ function ChatSupportTab({ companyId }: { companyId: number }) {
           {chatMutation.isPending && (
             <div className="flex items-start">
               <div className="bg-muted p-4 rounded-2xl rounded-tl-none border border-border/50">
-                <Loader2 className="h-4 h-4 animate-spin text-primary" />
+                <Loader2 className="w-4 h-4 animate-spin text-primary" />
               </div>
             </div>
           )}
         </div>
-      </ScrollArea>
+      </div>
 
       <CardFooter className="p-4 border-t bg-muted/10">
         <div className="flex w-full gap-2">

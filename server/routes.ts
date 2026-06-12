@@ -3,17 +3,43 @@ import type { Server } from "http";
 import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
-import { GoogleGenAI } from "@google/genai";
 import crypto from "crypto";
 
-// Initialize Gemini via Replit AI Integrations
-const ai = new GoogleGenAI({
-  apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY,
-  httpOptions: {
-    apiVersion: "",
-    baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL,
-  },
-});
+// Call Gemini via Replit AI Integrations using direct fetch
+async function callGemini(prompt: string): Promise<string> {
+  const baseUrl = process.env.AI_INTEGRATIONS_GEMINI_BASE_URL || "https://generativelanguage.googleapis.com";
+  const apiKey = process.env.AI_INTEGRATIONS_GEMINI_API_KEY || "";
+  // Try models in order until one works
+  const models = ["gemini-pro", "gemini-1.5-flash", "gemini-1.5-pro"];
+  for (const model of models) {
+    try {
+      const url = `${baseUrl}/v1beta/models/${model}:generateContent?key=${apiKey}`;
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        const code = (err as any)?.error?.code;
+        if (code === "UNSUPPORTED_MODEL" || code === "MODEL_NOT_FOUND" || res.status === 400) {
+          continue; // try next model
+        }
+        throw new Error(`Gemini API error ${res.status}`);
+      }
+      const data = await res.json() as any;
+      return data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    } catch (e: any) {
+      if (e.message?.includes("UNSUPPORTED_MODEL") || e.message?.includes("MODEL_NOT_FOUND")) {
+        continue;
+      }
+      throw e;
+    }
+  }
+  throw new Error("Nenhum modelo Gemini disponível");
+}
 
 function recommendIsos(sector: string): string[] {
   const s = sector.toLowerCase();
@@ -142,12 +168,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
             { "type": "Plano de Ação", "content": "..." }
           ]`;
 
-          const response = await ai.models.generateContent({
-            model: "gemini-1.5-flash",
-            contents: [{ role: "user", parts: [{ text: prompt }] }],
-          });
-
-          const text = (typeof response.text === "function" ? (response.text as any)() : response.text) || "";
+          const text = await callGemini(prompt);
           const jsonStart = text.indexOf('[');
           const jsonEnd = text.lastIndexOf(']') + 1;
           
@@ -211,12 +232,7 @@ Nome: ${company.name}, Setor: ${company.sector}, Tamanho: ${company.size}, Norma
 Retorne APENAS um array JSON válido (sem markdown):
 [{"type":"Manual da Qualidade","content":"..."},{"type":"Política da Empresa","content":"..."},{"type":"Plano de Ação","content":"..."}]`;
 
-      const response = await ai.models.generateContent({
-        model: "gemini-1.5-flash",
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-      });
-
-      const text = (typeof response.text === "function" ? (response.text as any)() : response.text) || "";
+      const text = await callGemini(prompt);
       const jsonStart = text.indexOf('[');
       const jsonEnd = text.lastIndexOf(']') + 1;
 
@@ -288,12 +304,7 @@ Retorne APENAS um array JSON válido (sem markdown):
       
       Responda de forma profissional, acolhedora e altamente técnica. Se o cliente perguntar algo sobre os documentos acima, use o conteúdo deles para responder.`;
 
-      const response = await ai.models.generateContent({
-        model: "gemini-1.5-flash",
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-      });
-
-      const aiContent = (typeof response.text === "function" ? (response.text as any)() : response.text) || "Desculpe, tive um problema ao processar sua solicitação.";
+      const aiContent = await callGemini(prompt).catch(() => "Desculpe, tive um problema ao processar sua solicitação. Tente novamente.");
       const assistantMsg = await storage.saveChatMessage({ companyId, role: "assistant", content: aiContent });
 
       res.status(201).json(assistantMsg);
