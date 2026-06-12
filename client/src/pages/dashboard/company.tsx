@@ -553,15 +553,12 @@ function ChatSupportTab({ companyId }: { companyId: number }) {
 
   const { data: messages, isLoading } = useQuery({
     queryKey: [buildUrl(api.chat.list.path, { id: companyId })],
-    queryFn: () => apiRequest(buildUrl(api.chat.list.path, { id: companyId })),
+    queryFn: () => apiRequest("GET", buildUrl(api.chat.list.path, { id: companyId })).then(r => r.json()),
   });
 
   const sendMutation = useMutation({
     mutationFn: (content: string) =>
-      apiRequest(buildUrl(api.chat.send.path, { id: companyId }), {
-        method: "POST",
-        body: JSON.stringify({ content }),
-      }),
+      apiRequest("POST", buildUrl(api.chat.send.path, { id: companyId }), { content }).then(r => r.json()),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [buildUrl(api.chat.list.path, { id: companyId })] });
       setMessage("");
