@@ -18,6 +18,7 @@ async function callGemini(prompt: string): Promise<string> {
     "mistralai/mistral-small-3.2-24b-instruct:free",
     "meta-llama/llama-3-8b-instruct:free",
     "mistralai/mistral-7b-instruct:free",
+    "openai/gpt-oss-120b"
   ];
 
   for (const model of models) {
