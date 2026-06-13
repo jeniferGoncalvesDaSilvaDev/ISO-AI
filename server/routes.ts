@@ -17,7 +17,7 @@ async function callGemini(prompt: string): Promise<string> {
   const models = [
     "mistralai/mistral-small-3.2-24b-instruct:free",
     "meta-llama/llama-3-8b-instruct:free",
-    "mistralai/mistral-7b-instruct:free",
+    "nvidia/nemotron-3-ultra-550b-a55b:free",
     "openai/gpt-oss-120b"
   ];
 
