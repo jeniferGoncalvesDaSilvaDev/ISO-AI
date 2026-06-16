@@ -11,13 +11,11 @@ async function callAI(
   prompt: string,
   conversationHistory: { role: string; content: string; reasoning_details?: any }[] = []
 ): Promise<string> {
-  const apiKey = process.env.NVIDIA_API_KEY || process.env.OPENAI_API_KEY;
-  const model = process.env.NVIDIA_API_KEY
-    ? "meta-llama/llama-3.3-70b-instruct:free"
-    : "openai/gpt-oss-120b:free";
+  const apiKey = process.env.API_KEY;
+  const model = "openai/gpt-oss-120b:free";
 
   if (!apiKey) {
-    throw new Error("Nenhuma IA configurada. Adicione NVIDIA_API_KEY ou OPENAI_API_KEY em Secrets.");
+    throw new Error("Nenhuma IA configurada. Adicione API_KEY em Secrets.");
   }
 
   // Monta mensagens: histórico preservado + nova mensagem do user
