@@ -6,72 +6,49 @@ import { z } from "zod";
 import crypto from "crypto";
 import { buildDocumentSet } from "./iso-templates";
 
-// ── IA: OpenRouter (NVIDIA primário → OpenAI fallback) ─────────────────────
-async function callAI(prompt: string): Promise<string> {
-  // 1. NVIDIA Nemotron via OpenRouter
-  if (process.env.NVIDIA_API_KEY) {
-    try {
-      const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${process.env.NVIDIA_API_KEY}`,
-          "HTTP-Referer": "http://localhost:5000",
-          "X-Title": "ISO SGQ App",
-        },
-        body: JSON.stringify({
-          model: "nvidia/nemotron-3-ultra-550b-a55b:free",
-          messages: [{ role: "user", content: prompt }],
-          max_tokens: 4096,
-          temperature: 0.7,
-        }),
-        signal: AbortSignal.timeout(20000),
-      });
-      if (res.ok) {
-        const data = await res.json() as any;
-        const text = data?.choices?.[0]?.message?.content || "";
-        if (text) return text;
-      } else {
-        const err = await res.text();
-        console.warn("NVIDIA/OpenRouter falhou:", res.status, err);
-      }
-    } catch (e: any) {
-      console.warn("NVIDIA/OpenRouter timeout/erro:", e.message);
-    }
+// ── IA: OpenRouter ─────────────────────────────────────────────────────────
+async function callAI(
+  prompt: string,
+  conversationHistory: { role: string; content: string; reasoning_details?: any }[] = []
+): Promise<string> {
+  const apiKey = process.env.NVIDIA_API_KEY || process.env.OPENAI_API_KEY;
+  const model = process.env.NVIDIA_API_KEY
+    ? "meta-llama/llama-3.3-70b-instruct:free"
+    : "openai/gpt-oss-120b:free";
+
+  if (!apiKey) {
+    throw new Error("Nenhuma IA configurada. Adicione NVIDIA_API_KEY ou OPENAI_API_KEY em Secrets.");
   }
 
-  // 2. OpenAI GPT-4o-mini via OpenRouter (fallback)
-  if (process.env.OPENAI_API_KEY) {
-    try {
-      const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
-          "HTTP-Referer": "http://localhost:5000",
-          "X-Title": "ISO SGQ App",
-        },
-        body: JSON.stringify({
-          model: "openai/gpt-oss-120b:free",
-          messages: [{ role: "user", content: prompt }],
-          max_tokens: 4096,
-        }),
-        signal: AbortSignal.timeout(30000),
-      });
-      if (res.ok) {
-        const data = await res.json() as any;
-        const text = data?.choices?.[0]?.message?.content || "";
-        if (text) return text;
-      } else {
-        const err = await res.text();
-        console.warn("OpenAI/OpenRouter falhou:", res.status, err);
-      }
-    } catch (e: any) {
-      console.warn("OpenAI/OpenRouter timeout/erro:", e.message);
-    }
+  // Monta mensagens: histórico preservado + nova mensagem do user
+  const messages = [
+    ...conversationHistory,
+    { role: "user", content: prompt },
+  ];
+
+  const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model,
+      messages,
+      reasoning: { enabled: true },
+    }),
+    signal: AbortSignal.timeout(30000),
+  });
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`OpenRouter ${res.status}: ${err}`);
   }
 
-  throw new Error("Nenhuma IA configurada. Adicione NVIDIA_API_KEY ou OPENAI_API_KEY em Secrets.");
+  const data = await res.json() as any;
+  const text = data?.choices?.[0]?.message?.content || "";
+  if (!text) throw new Error("OpenRouter retornou resposta vazia");
+  return text;
 }
 
 function recommendIsos(sector: string): string[] {
@@ -87,7 +64,7 @@ function recommendIsos(sector: string): string[] {
 
 export async function registerRoutes(httpServer: Server, app: Express): Promise<Server> {
 
-  // REGISTER - POST /api/auth/register
+  // REGISTER
   app.post("/api/auth/register", async (req, res) => {
     try {
       const { email, password } = req.body;
@@ -108,7 +85,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
-  // LOGIN - POST /api/auth/login
+  // LOGIN
   app.post("/api/auth/login", async (req, res) => {
     try {
       const { email, password } = req.body;
@@ -206,27 +183,25 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const docSet = buildDocumentSet(company, isoList);
 
       let aiEnhanced = false;
-      if (process.env.NVIDIA_API_KEY || process.env.OPENAI_API_KEY) {
-        try {
-          const prompt = `Você é um auditor sênior ISO. Revise e enriqueça o escopo e política para:
+      try {
+        const prompt = `Você é um auditor sênior ISO. Revise e enriqueça o escopo e política para:
 Empresa: ${company.name}, Setor: ${company.sector}, Porte: ${company.size}, Normas: ${isoList.join(', ')}.
-Retorne APENAS um JSON: {"escopo": "texto 3 parágrafos", "politica": "texto 3 parágrafos"}`;
-          const aiText = await callAI(prompt);
-          const jsonStart = aiText.indexOf('{');
-          const jsonEnd = aiText.lastIndexOf('}') + 1;
-          if (jsonStart !== -1 && jsonEnd > jsonStart) {
-            const parsed = JSON.parse(aiText.slice(jsonStart, jsonEnd));
-            if (parsed.escopo && parsed.politica) {
-              const scopeDoc = docSet.find(d => d.type.includes("Escopo"));
-              const policyDoc = docSet.find(d => d.type.includes("Política"));
-              if (scopeDoc) scopeDoc.content = parsed.escopo + "\n\n" + scopeDoc.content;
-              if (policyDoc) policyDoc.content = parsed.politica + "\n\n" + policyDoc.content;
-              aiEnhanced = true;
-            }
+Retorne APENAS um JSON válido, sem markdown: {"escopo": "texto 3 parágrafos", "politica": "texto 3 parágrafos"}`;
+        const aiText = await callAI(prompt);
+        const jsonStart = aiText.indexOf('{');
+        const jsonEnd = aiText.lastIndexOf('}') + 1;
+        if (jsonStart !== -1 && jsonEnd > jsonStart) {
+          const parsed = JSON.parse(aiText.slice(jsonStart, jsonEnd));
+          if (parsed.escopo && parsed.politica) {
+            const scopeDoc = docSet.find(d => d.type.includes("Escopo"));
+            const policyDoc = docSet.find(d => d.type.includes("Política"));
+            if (scopeDoc) scopeDoc.content = parsed.escopo + "\n\n" + scopeDoc.content;
+            if (policyDoc) policyDoc.content = parsed.politica + "\n\n" + policyDoc.content;
+            aiEnhanced = true;
           }
-        } catch (aiErr) {
-          console.warn("IA indisponível, usando templates completos:", (aiErr as Error).message);
         }
+      } catch (aiErr) {
+        console.warn("IA indisponível, usando templates completos:", (aiErr as Error).message);
       }
 
       const savedDocs = [];
@@ -280,23 +255,32 @@ Retorne APENAS um JSON: {"escopo": "texto 3 parágrafos", "politica": "texto 3 p
 
       await storage.saveChatMessage({ companyId, role: "user", content });
 
-      const recentHistory = history.slice(-6);
       const docContext = docs.slice(0, 3).map(d => `${d.type}: ${d.content.slice(0, 300)}`).join('\n\n');
 
-      const prompt = `Você é um Consultor Especialista Sênior em Certificação ISO. Empresa: ${company.name} (${company.sector}, ${company.size} colaboradores). Normas: ${isoList.join(', ') || 'nenhuma'}.
+      // Monta histórico no formato OpenRouter preservando reasoning_details
+      const conversationHistory = history.slice(-6).map(m => ({
+        role: m.role,
+        content: m.content,
+        ...(m.reasoning_details ? { reasoning_details: m.reasoning_details } : {}),
+      }));
+
+      const systemPrompt = `Você é um Consultor Especialista Sênior em Certificação ISO.
+Empresa: ${company.name} (${company.sector}, ${company.size} colaboradores).
+Normas: ${isoList.join(', ') || 'nenhuma'}.
 Contexto dos documentos gerados:
 ${docContext}
-Histórico recente:
-${recentHistory.map(m => `${m.role === 'user' ? 'Cliente' : 'Consultor'}: ${m.content}`).join('\n')}
-Cliente: ${content}
 Responda de forma clara, profissional e em português do Brasil. Seja objetivo e prático.`;
 
       let aiContent: string;
       try {
-        aiContent = await callAI(prompt);
+        // Passa systemPrompt como primeira mensagem do histórico
+        aiContent = await callAI(content, [
+          { role: "system", content: systemPrompt },
+          ...conversationHistory,
+        ]);
       } catch (aiErr) {
         console.warn("Chat IA indisponível:", (aiErr as Error).message);
-        aiContent = "Desculpe, o serviço de IA está temporariamente indisponível. Verifique se as chaves NVIDIA_API_KEY ou OPENAI_API_KEY estão configuradas corretamente nos Secrets.";
+        aiContent = "Desculpe, o serviço de IA está temporariamente indisponível. Verifique se as chaves estão configuradas corretamente nos Secrets.";
       }
 
       const assistantMsg = await storage.saveChatMessage({ companyId, role: "assistant", content: aiContent });
