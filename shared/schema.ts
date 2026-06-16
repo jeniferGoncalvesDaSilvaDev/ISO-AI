@@ -27,6 +27,7 @@ export const isoSelections = pgTable("iso_selections", {
 export const documents = pgTable("documents", {
   id: serial("id").primaryKey(),
   companyId: integer("company_id").notNull().references(() => companies.id),
+  section: text("section").notNull().default("Geral"),
   type: text("type").notNull(),
   content: text("content").notNull(),
   createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`)
@@ -35,7 +36,7 @@ export const documents = pgTable("documents", {
 export const chatMessages = pgTable("chat_messages", {
   id: serial("id").primaryKey(),
   companyId: integer("company_id").notNull().references(() => companies.id),
-  role: text("role").notNull(), // 'user' or 'assistant'
+  role: text("role").notNull(),
   content: text("content").notNull(),
   createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`)
 });

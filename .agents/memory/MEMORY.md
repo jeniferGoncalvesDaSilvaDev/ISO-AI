@@ -1,0 +1,4 @@
+- [ISO document generation](iso-doc-gen.md) — uses `server/iso-templates.ts` with buildDocumentSet(); no AI needed; templates cover ISO 9001 (13 docs), 27001 (6), 14001 (3), 45001 (3)
+- [AI routing](ai-routing.md) — callAI() tries NVIDIA nemotron-4 first (NVIDIA_API_KEY), then OpenAI gpt-4o-mini (OPENAI_API_KEY); both optional, templates always work without keys
+- [routes.ts signature](routes-signature.md) — registerRoutes(httpServer, app) takes httpServer as first param (not app first); index.ts calls it this way
+- [documents schema](docs-schema.md) — documents table has section column (added via drizzle-kit push); section groups docs into folders like "1. Estrutura do SGQ"

@@ -13,6 +13,7 @@ export interface IStorage {
   getIsoSelections(companyId: number): Promise<IsoSelection[]>;
   saveDocument(doc: InsertDocument): Promise<Document>;
   getDocuments(companyId: number): Promise<Document[]>;
+  deleteDocumentsByCompany(companyId: number): Promise<void>;
   saveChatMessage(message: InsertChatMessage): Promise<ChatMessage>;
   getChatMessages(companyId: number): Promise<ChatMessage[]>;
 }
@@ -42,10 +43,8 @@ export class DatabaseStorage implements IStorage {
     return company;
   }
   async saveIsoSelections(companyId: number, isos: string[]): Promise<IsoSelection[]> {
-    // Replace all existing selections for the company
     await db.delete(isoSelections).where(eq(isoSelections.companyId, companyId));
     if (isos.length === 0) return [];
-    
     const values = isos.map(isoCode => ({ companyId, isoCode }));
     const inserted = await db.insert(isoSelections).values(values).returning();
     return inserted;
@@ -59,6 +58,9 @@ export class DatabaseStorage implements IStorage {
   }
   async getDocuments(companyId: number): Promise<Document[]> {
     return await db.select().from(documents).where(eq(documents.companyId, companyId));
+  }
+  async deleteDocumentsByCompany(companyId: number): Promise<void> {
+    await db.delete(documents).where(eq(documents.companyId, companyId));
   }
   async saveChatMessage(message: InsertChatMessage): Promise<ChatMessage> {
     const [saved] = await db.insert(chatMessages).values(message).returning();
