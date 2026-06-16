@@ -6,19 +6,21 @@ import { z } from "zod";
 import crypto from "crypto";
 import { buildDocumentSet } from "./iso-templates";
 
-// ── IA: NVIDIA (primário) → OpenAI (fallback) ──────────────────────────────
+// ── IA: OpenRouter (NVIDIA primário → OpenAI fallback) ─────────────────────
 async function callAI(prompt: string): Promise<string> {
-  // 1. NVIDIA Nemotron (sem modelos Llama)
+  // 1. NVIDIA Nemotron via OpenRouter
   if (process.env.NVIDIA_API_KEY) {
     try {
-      const res = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
+      const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${process.env.NVIDIA_API_KEY}`,
+          "HTTP-Referer": "http://localhost:5000",
+          "X-Title": "ISO SGQ App",
         },
         body: JSON.stringify({
-          model: "nvidia/nemotron-4-340b-instruct",
+          model: "nvidia/nemotron-3-ultra-550b-a55b:free",
           messages: [{ role: "user", content: prompt }],
           max_tokens: 4096,
           temperature: 0.7,
@@ -30,24 +32,27 @@ async function callAI(prompt: string): Promise<string> {
         const text = data?.choices?.[0]?.message?.content || "";
         if (text) return text;
       } else {
-        console.warn("NVIDIA falhou:", res.status);
+        const err = await res.text();
+        console.warn("NVIDIA/OpenRouter falhou:", res.status, err);
       }
     } catch (e: any) {
-      console.warn("NVIDIA timeout/erro:", e.message);
+      console.warn("NVIDIA/OpenRouter timeout/erro:", e.message);
     }
   }
 
-  // 2. OpenAI GPT-4o-mini (fallback para internet lenta)
+  // 2. OpenAI GPT-4o-mini via OpenRouter (fallback)
   if (process.env.OPENAI_API_KEY) {
     try {
-      const res = await fetch("https://api.openai.com/v1/chat/completions", {
+      const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
+          "HTTP-Referer": "http://localhost:5000",
+          "X-Title": "ISO SGQ App",
         },
         body: JSON.stringify({
-          model: "gpt-4o-mini",
+          model: "openai/gpt-oss-120b:free",
           messages: [{ role: "user", content: prompt }],
           max_tokens: 4096,
         }),
@@ -58,10 +63,11 @@ async function callAI(prompt: string): Promise<string> {
         const text = data?.choices?.[0]?.message?.content || "";
         if (text) return text;
       } else {
-        console.warn("OpenAI falhou:", res.status);
+        const err = await res.text();
+        console.warn("OpenAI/OpenRouter falhou:", res.status, err);
       }
     } catch (e: any) {
-      console.warn("OpenAI timeout/erro:", e.message);
+      console.warn("OpenAI/OpenRouter timeout/erro:", e.message);
     }
   }
 
@@ -183,7 +189,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     res.json(selections);
   });
 
-  // DOCUMENT GENERATION — gera conjunto completo de documentos SGQ
+  // DOCUMENT GENERATION
   app.post(api.documents.generate.path, async (req, res) => {
     const companyId = Number(req.params.id);
     const company = await storage.getCompany(companyId);
@@ -196,13 +202,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
 
     try {
-      // Apaga docs antigos antes de regenerar
       await storage.deleteDocumentsByCompany(companyId);
-
-      // Gera conjunto completo baseado nos templates ISO (10-15 docs por norma)
       const docSet = buildDocumentSet(company, isoList);
 
-      // Tenta enriquecer com IA se disponível (sem travar a resposta)
       let aiEnhanced = false;
       if (process.env.NVIDIA_API_KEY || process.env.OPENAI_API_KEY) {
         try {
@@ -215,7 +217,6 @@ Retorne APENAS um JSON: {"escopo": "texto 3 parágrafos", "politica": "texto 3 p
           if (jsonStart !== -1 && jsonEnd > jsonStart) {
             const parsed = JSON.parse(aiText.slice(jsonStart, jsonEnd));
             if (parsed.escopo && parsed.politica) {
-              // Injeta conteúdo AI nos primeiros documentos relevantes
               const scopeDoc = docSet.find(d => d.type.includes("Escopo"));
               const policyDoc = docSet.find(d => d.type.includes("Política"));
               if (scopeDoc) scopeDoc.content = parsed.escopo + "\n\n" + scopeDoc.content;
@@ -228,7 +229,6 @@ Retorne APENAS um JSON: {"escopo": "texto 3 parágrafos", "politica": "texto 3 p
         }
       }
 
-      // Salva todos os documentos
       const savedDocs = [];
       for (const d of docSet) {
         const saved = await storage.saveDocument({
@@ -265,6 +265,10 @@ Retorne APENAS um JSON: {"escopo": "texto 3 parágrafos", "politica": "texto 3 p
     const companyId = Number(req.params.id);
     const { content } = req.body;
 
+    if (!content?.trim()) {
+      return res.status(400).json({ message: "Mensagem não pode ser vazia" });
+    }
+
     try {
       const company = await storage.getCompany(companyId);
       if (!company) return res.status(404).json({ message: "Empresa não encontrada" });
@@ -287,11 +291,12 @@ ${recentHistory.map(m => `${m.role === 'user' ? 'Cliente' : 'Consultor'}: ${m.co
 Cliente: ${content}
 Responda de forma clara, profissional e em português do Brasil. Seja objetivo e prático.`;
 
-      let aiContent = "Desculpe, o serviço de IA está temporariamente indisponível. Tente novamente em alguns instantes ou adicione uma chave de API (NVIDIA_API_KEY ou OPENAI_API_KEY) nas configurações.";
+      let aiContent: string;
       try {
         aiContent = await callAI(prompt);
       } catch (aiErr) {
         console.warn("Chat IA indisponível:", (aiErr as Error).message);
+        aiContent = "Desculpe, o serviço de IA está temporariamente indisponível. Verifique se as chaves NVIDIA_API_KEY ou OPENAI_API_KEY estão configuradas corretamente nos Secrets.";
       }
 
       const assistantMsg = await storage.saveChatMessage({ companyId, role: "assistant", content: aiContent });
