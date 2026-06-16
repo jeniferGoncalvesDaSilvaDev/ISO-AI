@@ -492,14 +492,268 @@ function GenerateDocumentsTab({
   );
 }
 
-// ── TAB 3: VIEW DOCUMENTS (placeholder — manter implementação existente) ──────
+// ── TAB 3: VIEW DOCUMENTS ────────────────────────────────────────────────────
 function ViewDocumentsTab({ companyId }: { companyId: number }) {
-  // Manter implementação existente do projeto
-  return null;
+  const { data: documents, isLoading, refetch, isFetching } = useCompanyDocuments(companyId);
+  const { toast } = useToast();
+
+  // Agrupa documentos por folder
+  const grouped = (documents ?? []).reduce((acc: Record<string, any[]>, doc: any) => {
+    const folder = doc.folder ?? "Geral";
+    if (!acc[folder]) acc[folder] = [];
+    acc[folder].push(doc);
+    return acc;
+  }, {});
+
+  const [openFolders, setOpenFolders] = useState<Record<string, boolean>>({});
+
+  const toggleFolder = (folder: string) => {
+    setOpenFolders(prev => ({ ...prev, [folder]: !prev[folder] }));
+  };
+
+  const handleDownloadPdf = (doc: any) => {
+    try {
+      const pdf = new jsPDF();
+      pdf.setFontSize(16);
+      pdf.text(doc.title ?? "Documento", 14, 20);
+      pdf.setFontSize(11);
+      const lines = pdf.splitTextToSize(doc.content ?? "", 180);
+      pdf.text(lines, 14, 34);
+      pdf.save(`${doc.title ?? "documento"}.pdf`);
+    } catch {
+      toast({ variant: "destructive", title: "Erro ao gerar PDF" });
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-3">
+        <Skeleton className="h-12 w-full rounded-xl" />
+        <Skeleton className="h-12 w-full rounded-xl" />
+        <Skeleton className="h-12 w-full rounded-xl" />
+      </div>
+    );
+  }
+
+  if (!documents || documents.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-center gap-4">
+        <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center">
+          <FileText className="w-8 h-8 text-muted-foreground" />
+        </div>
+        <div>
+          <p className="font-semibold text-lg"><span>Nenhum documento gerado ainda</span></p>
+          <p className="text-sm text-muted-foreground mt-1">
+            <span>Conclua o Passo 2 para gerar sua documentação ISO completa.</span>
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Header row */}
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="font-semibold text-foreground">
+            <span>{documents.length} documento{documents.length !== 1 ? "s" : ""} gerado{documents.length !== 1 ? "s" : ""}</span>
+          </p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            <span>Salvos na nuvem — disponíveis sempre que precisar</span>
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => refetch()}
+          disabled={isFetching}
+          className="gap-2"
+        >
+          {isFetching
+            ? <BtnLabel key="refreshing"><Loader2 className="w-3.5 h-3.5 animate-spin" /><span>Atualizando...</span></BtnLabel>
+            : <BtnLabel key="refresh"><RefreshCw className="w-3.5 h-3.5" /><span>Atualizar</span></BtnLabel>
+          }
+        </Button>
+      </div>
+
+      {/* Folder groups */}
+      <div className="space-y-2">
+        {Object.entries(grouped).map(([folder, docs]) => {
+          const isOpen = openFolders[folder] !== false; // aberto por padrão
+          return (
+            <Card key={folder} className="border-border/60 overflow-hidden">
+              {/* Folder header */}
+              <button
+                onClick={() => toggleFolder(folder)}
+                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors text-left"
+              >
+                {isOpen
+                  ? <FolderOpen className="w-4 h-4 text-primary flex-shrink-0" />
+                  : <Folder className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                }
+                <span className="font-medium text-sm flex-1">{folder}</span>
+                <Badge variant="secondary" className="text-xs">
+                  <span>{docs.length}</span>
+                </Badge>
+                <ChevronRight className={`w-4 h-4 text-muted-foreground transition-transform ${isOpen ? "rotate-90" : ""}`} />
+              </button>
+
+              {/* Document list */}
+              {isOpen && (
+                <div className="border-t border-border/50">
+                  {docs.map((doc: any, i: number) => (
+                    <div
+                      key={doc.id ?? i}
+                      className="flex items-center gap-3 px-4 py-3 hover:bg-muted/20 transition-colors border-b border-border/30 last:border-0"
+                    >
+                      <FileText className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate"><span>{doc.title ?? "Documento"}</span></p>
+                        {doc.isoCode && (
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            <span>{doc.isoCode}</span>
+                          </p>
+                        )}
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleDownloadPdf(doc)}
+                        className="gap-1.5 flex-shrink-0"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        <span>PDF</span>
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
-// ── TAB 4: CHAT SUPPORT (placeholder — manter implementação existente) ────────
+// ── TAB 4: CHAT SUPPORT ───────────────────────────────────────────────────────
 function ChatSupportTab({ companyId }: { companyId: number }) {
-  // Manter implementação existente do projeto
-  return null;
+  const [messages, setMessages] = useState<{ role: "user" | "assistant"; content: string }[]>([
+    { role: "assistant", content: "Olá! Sou o assistente de suporte ISO. Posso tirar dúvidas sobre normas, documentação e implementação do SGQ. Como posso ajudar?" },
+  ]);
+  const [input, setInput] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const bottomRef = useState<HTMLDivElement | null>(null);
+
+  const sendMessage = async () => {
+    const text = input.trim();
+    if (!text || isLoading) return;
+
+    const userMsg = { role: "user" as const, content: text };
+    setMessages(prev => [...prev, userMsg]);
+    setInput("");
+    setIsLoading(true);
+
+    try {
+      const res = await apiRequest("POST", buildUrl(api.chat.send.path, { id: companyId }), {
+        message: text,
+        history: messages,
+      });
+      const data = await res.json();
+      setMessages(prev => [...prev, { role: "assistant", content: data.reply ?? data.message ?? "Sem resposta." }]);
+    } catch {
+      toast({ variant: "destructive", title: "Erro ao enviar mensagem", description: "Tente novamente." });
+      // Remove a mensagem do user se falhou
+      setMessages(prev => prev.slice(0, -1));
+      setInput(text);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  };
+
+  return (
+    <Card className="border-border/60 shadow-md flex flex-col" style={{ height: "560px" }}>
+      <CardHeader className="border-b border-border/50 pb-3">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
+            <MessageCircle className="w-4 h-4 text-primary" />
+          </div>
+          <div>
+            <CardTitle className="text-base"><span>Suporte ISO</span></CardTitle>
+            <CardDescription className="text-xs">
+              <span>Tire dúvidas sobre normas, documentação e implementação</span>
+            </CardDescription>
+          </div>
+          <div className="ml-auto flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+            <span className="text-xs text-muted-foreground">Online</span>
+          </div>
+        </div>
+      </CardHeader>
+
+      {/* Messages */}
+      <CardContent className="flex-1 overflow-y-auto p-4 space-y-3">
+        {messages.map((msg, i) => (
+          <div
+            key={i}
+            className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+          >
+            <div
+              className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed
+                ${msg.role === "user"
+                  ? "bg-primary text-primary-foreground rounded-br-sm"
+                  : "bg-muted text-foreground rounded-bl-sm"
+                }`}
+            >
+              <span>{msg.content}</span>
+            </div>
+          </div>
+        ))}
+        {isLoading && (
+          <div className="flex justify-start">
+            <div className="bg-muted rounded-2xl rounded-bl-sm px-4 py-3 flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: "0ms" }} />
+              <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: "150ms" }} />
+              <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: "300ms" }} />
+            </div>
+          </div>
+        )}
+      </CardContent>
+
+      {/* Input */}
+      <CardFooter className="border-t border-border/50 pt-3 gap-2">
+        <Input
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="Pergunte sobre ISO 9001, auditorias, documentação..."
+          disabled={isLoading}
+          className="flex-1"
+          data-testid="chat-input"
+        />
+        <Button
+          onClick={sendMessage}
+          disabled={isLoading || !input.trim()}
+          size="icon"
+          className="flex-shrink-0"
+          data-testid="chat-send"
+        >
+          {isLoading
+            ? <Loader2 className="w-4 h-4 animate-spin" />
+            : <Send className="w-4 h-4" />
+          }
+        </Button>
+      </CardFooter>
+    </Card>
+  );
 }
