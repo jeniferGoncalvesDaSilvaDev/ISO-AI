@@ -203,7 +203,6 @@ export default function CompanyDashboard() {
 // ── TAB 1: ISO SELECTION ──────────────────────────────────────────────────────
 function IsoSelectionTab({ company, onSaved }: { company: any; onSaved: () => void }) {
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   const { data: savedIsos, isLoading: isosLoading } = useCompanyIsos(company.id);
   const recommendMutation = useRecommendIso();
   const selectMutation = useSelectIso();
@@ -499,7 +498,7 @@ function ViewDocumentsTab({ companyId }: { companyId: number }) {
 
   // Agrupa documentos por folder
   const grouped = (documents ?? []).reduce((acc: Record<string, any[]>, doc: any) => {
-    const folder = doc.folder ?? "Geral";
+    const folder = doc.section ?? "Geral";
     if (!acc[folder]) acc[folder] = [];
     acc[folder].push(doc);
     return acc;
@@ -515,11 +514,11 @@ function ViewDocumentsTab({ companyId }: { companyId: number }) {
     try {
       const pdf = new jsPDF();
       pdf.setFontSize(16);
-      pdf.text(doc.title ?? "Documento", 14, 20);
+      pdf.text(doc.type ?? "Documento", 14, 20);
       pdf.setFontSize(11);
       const lines = pdf.splitTextToSize(doc.content ?? "", 180);
       pdf.text(lines, 14, 34);
-      pdf.save(`${doc.title ?? "documento"}.pdf`);
+      pdf.save(`${doc.type ?? "documento"}.pdf`);
     } catch {
       toast({ variant: "destructive", title: "Erro ao gerar PDF" });
     }
@@ -609,10 +608,10 @@ function ViewDocumentsTab({ companyId }: { companyId: number }) {
                     >
                       <FileText className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate"><span>{doc.title ?? "Documento"}</span></p>
-                        {doc.isoCode && (
+                        <p className="text-sm font-medium truncate"><span>{doc.type ?? "Documento"}</span></p>
+                        {doc.section && (
                           <p className="text-xs text-muted-foreground mt-0.5">
-                            <span>{doc.isoCode}</span>
+                            <span>{doc.section}</span>
                           </p>
                         )}
                       </div>
@@ -645,8 +644,6 @@ function ChatSupportTab({ companyId }: { companyId: number }) {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const bottomRef = useState<HTMLDivElement | null>(null);
 
   const sendMessage = async () => {
     const text = input.trim();
@@ -659,11 +656,10 @@ function ChatSupportTab({ companyId }: { companyId: number }) {
 
     try {
       const res = await apiRequest("POST", buildUrl(api.chat.send.path, { id: companyId }), {
-        message: text,
-        history: messages,
+        content: text,
       });
       const data = await res.json();
-      setMessages(prev => [...prev, { role: "assistant", content: data.reply ?? data.message ?? "Sem resposta." }]);
+      setMessages(prev => [...prev, { role: "assistant", content:  data.content ?? "Sem resposta." }]);
     } catch {
       toast({ variant: "destructive", title: "Erro ao enviar mensagem", description: "Tente novamente." });
       // Remove a mensagem do user se falhou
