@@ -182,8 +182,151 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
       let aiEnhanced = false;
       try {
-        const prompt = `Você é um auditor sênior ISO. Revise e enriqueça o escopo e política para:
-Empresa: ${company.name}, Setor: ${company.sector}, Porte: ${company.size}, Normas: ${isoList.join(', ')}.
+        const prompt = `Você é um consultor líder ISO 9001:2015 com vasta experiência em implementação e auditoria de certificação em empresas de manufatura, metalurgia e indústria em geral.
+
+**FASE 1: DIAGNÓSTICO E PLANEJAMENTO (OBRIGATÓRIO)**
+
+Antes de gerar qualquer documento, você DEVE realizar o seguinte diagnóstico da empresa:
+
+1. **Contexto Organizacional**
+   - Identificar as partes interessadas relevantes (clientes, fornecedores, órgãos reguladores, colaboradores)
+   - Mapear as necessidades e expectativas de cada parte interessada
+   - Identificar fatores internos e externos que impactam a qualidade
+
+2. **Mapa de Processos**
+   - Descrever detalhadamente o fluxograma de processos da empresa
+   - Identificar processos principais, de suporte e gerenciais
+   - Definir entradas, saídas, fornecedores e clientes de cada processo
+
+3. **Matriz de Riscos e Oportunidades**
+   - Listar riscos associados a cada processo (com probabilidade e impacto)
+   - Propor ações de mitigação para riscos críticos
+   - Identificar oportunidades de melhoria (redução de custos, aumento de eficiência, etc.)
+
+4. **Objetivos da Qualidade**
+   - Definir KPIs mensuráveis por processo (ex: taxa de defeitos < 2%, OEE > 85%, etc.)
+   - Estabelecer metas quantitativas e prazos para cada objetivo
+   - Alinhar objetivos com a Política da Qualidade
+
+**FASE 2: GERAÇÃO DE DOCUMENTOS**
+
+Com base no diagnóstico acima, gere UM ÚNICO DOCUMENTO COMPLETO PARA CADA ITEM da matriz documental obrigatória.
+
+**ESTRUTURA OBRIGATÓRIA PARA CADA DOCUMENTO:**
+
+**CABEÇALHO INSTITUCIONAL**
+- Logomarca (descritiva, ex: "Nome da Empresa - SGQ")
+- Título do Documento
+- Código do Documento (conforme matriz)
+- Revisão: 00
+- Data de Emissão: [data atual]
+- Próxima Revisão: [data atual + 1 ano]
+
+**CORPO DO DOCUMENTO (mínimo 1200 palavras)**
+
+1. OBJETIVO
+   Descrever claramente o propósito do documento, alinhado com a ISO 9001:2015
+
+2. ESCOPO
+   Definir a abrangência do documento (processos, áreas, produtos/serviços)
+
+3. RESPONSABILIDADES
+   - Quem elabora, quem revisa, quem aprova
+   - Responsabilidades específicas por cargo/função
+
+4. DEFINIÇÕES E SIGLAS
+   Glossário técnico com todos os termos relevantes
+
+5. DESCRIÇÃO DETALHADA
+   - Como o processo/função é executado
+   - Sequência de atividades (passo a passo)
+   - Critérios de entrada e saída
+
+6. FLUXO DO PROCESSO
+   - Descrição narrativa do fluxograma
+   - Pontos de decisão e alternativas
+   - Interfaces com outros processos
+
+7. INDICADORES DE DESEMPENHO
+   - Métricas específicas para monitoramento
+   - Frequência de medição
+   - Metas quantitativas
+   - Responsável pela coleta
+
+8. REGISTROS ASSOCIADOS
+   - Documentos gerados como evidência
+   - Formulários utilizados
+   - Local de armazenamento e tempo de retenção
+
+9. REFERÊNCIAS NORMATIVAS
+   - Itens específicos da ISO 9001:2015
+   - Legislação aplicável
+   - Documentos correlacionados do SGQ
+
+10. HISTÓRICO DE REVISÕES
+    - Data, descrição da alteração, autor
+
+11. APROVAÇÃO
+    - Nome e cargo do aprovador
+    - Assinatura (descritiva)
+
+**MATRIZ DOCUMENTAL OBRIGATÓRIA:**
+
+ESTRUTURA DO SGQ:
+- SGQ-01 Escopo do Sistema de Gestão da Qualidade (incluir exclusões justificadas)
+- SGQ-02 Mapa de Processos (incluir interação entre processos)
+- SGQ-03 Política da Qualidade (compromisso com qualidade, melhoria contínua)
+- SGQ-04 Objetivos da Qualidade (metas mensuráveis para cada processo)
+
+PROCEDIMENTOS:
+- PQ-01 Controle de Documentos e Registros (incluir procedimento para documentos obsoletos)
+- PQ-02 Controle de Não Conformidade e Ação Corretiva (incluir análise de causa raiz)
+- PQ-03 Auditoria Interna (incluir programa de auditoria, cronograma)
+- PQ-04 Análise Crítica pela Direção (incluir pauta, periodicidade)
+- PQ-05 Controle de Produto Não Conforme (incluir fluxo de decisão: retrabalho, sucata, etc.)
+- PQ-06 Rastreabilidade de Produção (incluir sistema de identificação único)
+- PQ-07 Inspeção e Controle da Qualidade (incluir critérios de aceitação/rejeição)
+
+REGISTROS:
+- FQ-01 Lista Mestra de Documentos (controle de versões)
+- FQ-02 Registro de Não Conformidade e Ação Corretiva (tabela com campos preenchidos)
+- FQ-03 Registro de Auditoria Interna (checklist, evidências)
+- OP-2026-001 Ordem de Produção (com especificações técnicas)
+- RQ-01 Registro de Inspeção (com resultados de medições)
+- RQ-02 Registro de Retrabalho e Sucata (quantificação e custos)
+- RT-01 Registro de Treinamento (habilidades, certificações)
+- RT-02 Lista de Presença (treinamentos, reuniões)
+- RT-03 Matriz de Competência (habilidades por função)
+- RC-01 Registro de Calibração (equipamentos de medição)
+
+FORMULÁRIOS:
+- FQ-02 Modelo de Não Conformidade
+- FQ-03 Modelo de Auditoria
+- FQ-04 Modelo de Ordem de Produção
+- FQ-05 Modelo de Inspeção
+- FQ-06 Modelo de Treinamento
+
+DOCUMENTOS EXTERNOS CONTROLADOS:
+- Certificados de Matéria-Prima (MTR) - modelo de controle
+- Desenhos de Clientes - procedimento de arquivamento
+- Especificações Técnicas - sistema de atualização
+- Certificados de Calibração - plano de calibração
+
+**REQUISITOS DE QUALIDADE:**
+
+1. Coerência documental: todos os documentos devem se referenciar e criar um sistema integrado
+2. Utilizar os dados reais da empresa: ${company.name}, Setor: ${company.sector}, Porte: ${company.size}, ${isoList.join(', ')}
+3. Linguagem técnica e profissional, mas acessível
+4. Conteúdo prático e aplicável, com exemplos concretos
+5. Profundidade compatível com consultoria de R$ 15.000 a R$ 30.000
+6. Mínimo de 1200 palavras por documento
+
+**IMPORTANTE:** 
+- Gere os documentos em português do Brasil
+- Utilize dados fictícios coerentes com o setor (ex: produtos específicos, equipamentos, etc.)
+- Inclua números de processos, códigos de produtos e dados realistas
+- Documentos devem estar prontos para implementação imediata
+
 Retorne APENAS um JSON válido, sem markdown: {"escopo": "texto 3 parágrafos", "politica": "texto 3 parágrafos"}`;
         const aiText = await callAI(prompt);
         const jsonStart = aiText.indexOf('{');
